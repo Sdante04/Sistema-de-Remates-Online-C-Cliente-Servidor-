@@ -1,0 +1,20 @@
+# Carpetas de compilación
+bin/
+obj/
+.vs/
+.vscode/
+
+# Archivos temporales y de usuario
+*.user
+*.suo
+*.exe
+*.dll
+*.pdb
+*.cache
+*.log
+*.bak
+*.swp
+*.tmp
+*.db
+Thumbs.db
+*.DS_Store
