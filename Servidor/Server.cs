@@ -1,12 +1,28 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Net;
+using System.Net.Sockets;
+using Servidor.Utils;
 
-namespace Servidor
+namespace Servidor;
+
+class Server
 {
-    public class Server
+    static void Main(string[] args)
     {
+        Logger.Log("Levantando servidor...");
+
+        Socket socketServidor = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        socketServidor.Bind(new IPEndPoint(IPAddress.Any, Config.PUERTO));
+        socketServidor.Listen();
+
+        Logger.Log($"Servidor escuchando en puerto {Config.PUERTO}");
+
+        while (true) //mala practica, hay que corregir
+        {
+            Socket socketCliente = socketServidor.Accept();
+            Logger.Log("Nuevo cliente conectado");
+
+            Thread hilo = new Thread(() => new HiloCliente(socketCliente).Atender());
+            hilo.Start();
+        }
     }
 }

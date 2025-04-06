@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 
 namespace Servidor.Dominio
 {
-    class Usuario
+    public class Usuario
     {
+        public string NombreUsuario;
+        public string Clave;
     }
 }
