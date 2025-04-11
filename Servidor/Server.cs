@@ -1,27 +1,30 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Servidor.Utils;
+using Common.Config;
 
 namespace Servidor;
 
-class Server
+public class Server
 {
-    static void Main(string[] args)
+    private static int contadorClientes = 0;
+
+    static void Main()
     {
         Logger.Log("Levantando servidor...");
-
-        Socket socketServidor = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        socketServidor.Bind(new IPEndPoint(IPAddress.Any, Config.PUERTO));
+        var socketServidor = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        socketServidor.Bind(new IPEndPoint(IPAddress.Parse(ServerConfig.IP), ServerConfig.Puerto));
         socketServidor.Listen();
 
-        Logger.Log($"Servidor escuchando en puerto {Config.PUERTO}");
+        Logger.Log($"Servidor escuchando en puerto {ServerConfig.Puerto}");
 
-        while (true) //mala practica, hay que corregir
+        while (true)
         {
             Socket socketCliente = socketServidor.Accept();
-            Logger.Log("Nuevo cliente conectado");
+            int idCliente = Interlocked.Increment(ref contadorClientes);
+            Logger.Log($"Nuevo cliente conectado (ID: {idCliente})");
 
-            Thread hilo = new Thread(() => new HiloCliente(socketCliente).Atender());
+            Thread hilo = new Thread(() => new HiloCliente(socketCliente, idCliente).Atender());
             hilo.Start();
         }
     }

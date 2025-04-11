@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Servidor.Dominio
 {
-    class Articulo
+    public class Articulo
     {
     }
 }
