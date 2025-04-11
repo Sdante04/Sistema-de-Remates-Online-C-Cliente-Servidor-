@@ -7,35 +7,23 @@ namespace Cliente;
 public class Cliente
 {
     private Socket _socket;
+    private StreamReader _reader;
+    private StreamWriter _writer;
 
     public Cliente()
     {
         _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
     }
 
-    public void Conectar(string ip, int puerto)
+    public void Conectar()
     {
-        _socket.Connect(new IPEndPoint(IPAddress.Parse(ip), puerto));
+        _socket.Connect(IPAddress.Parse(ClientConfig.IPServidor), ClientConfig.PuertoServidor);
+        NetworkStream stream = new NetworkStream(_socket);
+        _reader = new StreamReader(stream, Encoding.UTF8);
+        _writer = new StreamWriter(stream, Encoding.UTF8) { AutoFlush = true };
         Console.WriteLine("Conectado al servidor.");
     }
 
-    public void Enviar(string mensaje)
-    {
-        byte[] mensajeBytes = Encoding.UTF8.GetBytes(mensaje);
-        byte[] largo = BitConverter.GetBytes(mensajeBytes.Length);
-        _socket.Send(largo);
-        _socket.Send(mensajeBytes);
-    }
-
-    public string Recibir()
-    {
-        byte[] largoBytes = new byte[4];
-        _socket.Receive(largoBytes);
-        int largo = BitConverter.ToInt32(largoBytes, 0);
-
-        byte[] buffer = new byte[largo];
-        _socket.Receive(buffer);
-
-        return Encoding.UTF8.GetString(buffer);
-    }
+    public void Enviar(string mensaje) => _writer.WriteLine(mensaje);
+    public string Recibir() => _reader.ReadLine();
 }
