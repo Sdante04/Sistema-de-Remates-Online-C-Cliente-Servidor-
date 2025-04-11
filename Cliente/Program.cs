@@ -1,13 +1,13 @@
 ﻿namespace Cliente;
 
-class Program
+public class Program
 {
-    static void Main(string[] args)
+    static void Main()
     {
-        Cliente cliente = new Cliente();
-        cliente.Conectar("127.0.0.1", 5000);
+        var cliente = new Cliente();
+        cliente.Conectar();
 
-        MenuCliente menu = new MenuCliente(cliente);
+        var menu = new MenuCliente(cliente);
         menu.Mostrar();
     }
 }
