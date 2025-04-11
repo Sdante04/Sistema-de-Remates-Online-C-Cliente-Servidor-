@@ -17,42 +17,32 @@ public class MenuCliente
 
     public void Mostrar()
     {
-        bool salir = false;
-        while (!salir)
+        while (true)
         {
-            Console.WriteLine("\n==== MENÚ ====");
-            Console.WriteLine("1. Iniciar sesión");
-            Console.WriteLine("2. Salir");
-            Console.Write("Elija una opción: ");
-            string opcion = Console.ReadLine();
+            Console.WriteLine("\n1. Login\n0. Salir");
+            Console.Write("Opción: ");
+            var opcion = Console.ReadLine();
 
-            switch (opcion)
+            if (opcion == "1")
             {
-                case "1":
-                    Login();
-                    break;
-                case "2":
-                    salir = true;
-                    break;
-                default:
-                    Console.WriteLine("Opción inválida.");
-                    break;
+                Console.Write("Usuario: ");
+                string usuario = Console.ReadLine();
+
+                Console.Write("Clave: ");
+                string clave = Console.ReadLine();
+
+                _cliente.Enviar($"LOGIN|{usuario}|{clave}");
+                string respuesta = _cliente.Recibir();
+                Console.WriteLine($"Servidor respondió: {respuesta}");
+            }
+            else if (opcion == "0")
+            {
+                break;
+            }
+            else
+            {
+                Console.WriteLine("Opción inválida.");
             }
         }
-    }
-
-    private void Login()
-    {
-        Console.Write("Usuario: ");
-        string usuario = Console.ReadLine();
-
-        Console.Write("Clave: ");
-        string clave = Console.ReadLine();
-
-        string mensaje = $"LOGIN|{usuario}|{clave}";
-        _cliente.Enviar(mensaje);
-
-        string respuesta = _cliente.Recibir();
-        Console.WriteLine($"Servidor respondió: {respuesta}");
     }
 }
