@@ -9,7 +9,7 @@ public class Server
 {
     private static int contadorClientes = 0;
 
-    static void Main()
+   public static void Main()
     {
         Logger.Log("Levantando servidor...");
         var socketServidor = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
