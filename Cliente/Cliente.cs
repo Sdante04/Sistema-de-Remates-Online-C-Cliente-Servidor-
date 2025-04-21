@@ -26,5 +26,53 @@ public class Cliente
     }
 
     public void Enviar(string mensaje) => _writer.WriteLine(mensaje);
-    public string Recibir() => _reader.ReadLine();
+
+    public string Recibir()
+    {
+        try
+        {
+            string? respuesta = _reader.ReadLine();
+            if (respuesta == null)
+            {
+                Console.WriteLine("El servidor cerró la conexión.");
+                Environment.Exit(0);
+            }
+            return respuesta;
+        }
+        catch (IOException)
+        {
+            Console.WriteLine("El servidor cerró la conexión.");
+            Environment.Exit(0);
+            return "";
+        }
+    }
+
+    public void IniciarEscuchaServidor()
+    {
+        Thread hiloEscucha = new Thread(() =>
+        {
+            try
+            {
+                while (true)
+                {
+                    string? mensaje = _reader.ReadLine();
+                    if (mensaje == null)
+                    {
+                        Console.WriteLine("\n El servidor cerró la conexión.");
+                        Environment.Exit(0);
+                    }
+                }
+            }
+            catch (IOException)
+            {
+                Console.WriteLine("El servidor cerró la conexión inesperadamente.");
+                Environment.Exit(0);
+            }
+        });
+
+        hiloEscucha.IsBackground = true;
+        hiloEscucha.Start();
+    }
+
+
 }

@@ -1,14 +1,14 @@
-﻿using System.Net.Sockets;
+﻿using Servidor.Servicios;
+using Servidor.Utils;
+using System.Net.Sockets;
 using System.Text;
-using Servidor.Servicios;
-
-namespace Servidor.Utils;
 
 public class HiloCliente
 {
     private Socket _socket;
     private int _idCliente;
     private UsuarioServicio _usuarioServicio;
+    private bool _activo = true;
 
     public HiloCliente(Socket socket, int id)
     {
@@ -25,7 +25,7 @@ public class HiloCliente
             StreamReader reader = new StreamReader(stream, Encoding.UTF8);
             StreamWriter writer = new StreamWriter(stream, Encoding.UTF8) { AutoFlush = true };
 
-            while (true)
+            while (_activo)
             {
                 string? mensaje = reader.ReadLine();
                 if (mensaje == null) break;
@@ -48,14 +48,27 @@ public class HiloCliente
                 }
             }
         }
+        catch (IOException ioEx)
+        {
+            if (_activo) 
+                Logger.Error($"Error con cliente {_idCliente}: {ioEx.Message}");
+        }
         catch (Exception ex)
         {
-            Logger.Error("Error con cliente: " + ex.Message);
+            Logger.Error($"Error inesperado con cliente {_idCliente}: {ex.Message}");
         }
         finally
         {
             _socket.Close();
             Logger.Log($"Cliente {_idCliente} desconectado.");
         }
+    }
+
+
+    public void Cerrar()
+    {
+        _activo = false;
+        try { _socket.Shutdown(SocketShutdown.Both); } catch { }
+        _socket.Close();
     }
 }

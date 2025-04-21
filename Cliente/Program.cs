@@ -6,6 +6,7 @@ public class Program
     {
         var cliente = new Cliente();
         cliente.Conectar();
+        cliente.IniciarEscuchaServidor();
 
         var menu = new MenuCliente(cliente);
         menu.Mostrar();

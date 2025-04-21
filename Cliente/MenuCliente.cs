@@ -37,6 +37,7 @@ public class MenuCliente
             }
             else if (opcion == "0")
             {
+                Console.WriteLine("Conexión terminada.");
                 break;
             }
             else
