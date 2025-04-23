@@ -36,17 +36,37 @@ namespace Servidor.Utils
                     {
                         case CommandConstants.Login:
                             var parts = data.Split('|');
-                            resp = _us.Autenticar(parts[0], parts[1]) != null ? "LOGIN_OK" : "LOGIN_FAIL";
+                            var usuario = parts[0];
+                            if (_us.Autenticar(parts[0], parts[1]) != null)
+                            {
+                                Logger.Log($"[Cliente {_id}] Usuario '{usuario}' inició sesión correctamente.");
+                                resp = "LOGIN_OK";
+                            }
+                            else
+                            {
+                                Logger.Warn($"[Cliente {_id}] Fallo de login para usuario '{usuario}'.");
+                                resp = "LOGIN_FAIL";
+                            }
                             break;
                         case CommandConstants.PublicarArticulo:
                             {
-                                // Usuario simulado para pruebas, en un futuro integrar con servicio de autenticación
-                                string usuario = $"cliente_{_id}";
+                                string user = $"cliente_{_id}";
                                 bool ok;
-                                string mensaje = _articuloServicio.PublicarArticulo(data, usuario, out ok);
+                                string mensaje = _articuloServicio.PublicarArticulo(data, user, out ok);
+                                if (ok)
+                                {
+                                    var partes = data.Split('|');
+                                    string titulo = partes[0];
+                                    Logger.Log($"[Cliente {_id}] Usuario '{user}' publicó el artículo '{titulo}'.");
+                                }
+                                else
+                                {
+                                    Logger.Warn($"[Cliente {_id}] Fallo al publicar artículo. Datos: {data}");
+                                }
                                 resp = mensaje;
                                 break;
                             }
+
                         default:
                             resp = "CMD_DESCONOCIDO";
                             break;

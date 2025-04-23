@@ -49,17 +49,43 @@ namespace Cliente
             Console.Write("Precio base: "); string precio = Console.ReadLine();
             Console.Write("Fecha cierre (dd-MM-yyyy HH:mm): "); string fecha = Console.ReadLine();
 
-            string datos = $"{titulo}|{descripcion}|{categoria}|{precio}|{fecha}";
+            Console.Write("¿Deseas agregar una imagen al artículo? (S/N): ");
+            string agregarImagen = Console.ReadLine()?.Trim().ToUpper();
+            string imagenBase64 = "";
+
+            if (agregarImagen == "S")
+            {
+                Console.Write("Ruta de la imagen: ");
+                string ruta = Console.ReadLine();
+                if (File.Exists(ruta))
+                {
+                    try
+                    {
+                        byte[] bytes = File.ReadAllBytes(ruta);
+                        imagenBase64 = Convert.ToBase64String(bytes);
+                    }
+                    catch
+                    {
+                        Console.WriteLine("Error al leer el archivo. No se agregará imagen.");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Archivo no encontrado, no se agregará imagen.");
+                }
+            }
+
+            string datos = $"{titulo}|{descripcion}|{categoria}|{precio}|{fecha}|{imagenBase64}";
             _cliente.EnviarComando(CommandConstants.PublicarArticulo, datos);
             int cmd;
             string respuesta = _cliente.RecibirRespuesta(out cmd);
-            if (respuesta.Contains("fue publicado correctamente"))
-                Console.WriteLine(respuesta);
-            else
-                Console.WriteLine("Error al publicar.");
 
+            if (!respuesta.Contains("fue publicado correctamente"))
+                Console.WriteLine("Error al publicar.");
+            else
             Console.WriteLine($"Servidor respondió: {respuesta}");
         }
+
     }
 }
 
