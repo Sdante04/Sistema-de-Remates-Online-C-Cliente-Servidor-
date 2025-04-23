@@ -1,48 +1,66 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Common.Common;
 
-namespace Cliente;
-
-public class MenuCliente
+namespace Cliente
 {
-    private Cliente _cliente;
-
-    public MenuCliente(Cliente cliente)
+    public class MenuCliente
     {
-        _cliente = cliente;
-    }
+        private Cliente _cliente;
+        private string _usuarioActual = string.Empty;
 
-    public void Mostrar()
-    {
-        while (true)
+        public MenuCliente(Cliente cliente)
         {
-            Console.WriteLine("\n1. Login\n0. Salir");
-            Console.Write("Opción: ");
-            var opcion = Console.ReadLine();
+            _cliente = cliente;
+        }
 
-            if (opcion == "1")
+        public void Mostrar()
+        {
+            while (true)
             {
-                Console.Write("Usuario: ");
-                string usuario = Console.ReadLine();
+                Console.WriteLine("\n1. Login");
+                Console.WriteLine("2. Publicar artículo");
+                Console.WriteLine("0. Salir");
+                Console.Write("Opción: ");
+                string op = Console.ReadLine();
 
-                Console.Write("Clave: ");
-                string clave = Console.ReadLine();
+                if (op == "1") Login();
+                else if (op == "2" && !string.IsNullOrEmpty(_usuarioActual)) PublicarArticulo();
+                else if (op == "0") { Console.WriteLine("Conexión terminada."); break; }
+                else Console.WriteLine("Opción inválida o no autenticado.");
+            }
+        }
 
-                _cliente.Enviar($"LOGIN|{usuario}|{clave}");
-                string respuesta = _cliente.Recibir();
-                Console.WriteLine($"Servidor respondió: {respuesta}");
-            }
-            else if (opcion == "0")
-            {
-                break;
-            }
+        private void Login()
+        {
+            Console.Write("Usuario: "); string usuario = Console.ReadLine();
+            Console.Write("Clave: "); string contrasena = Console.ReadLine();
+            _cliente.EnviarComando(CommandConstants.Login, $"{usuario}|{contrasena}");
+            int cmd;
+            string respuesta = _cliente.RecibirRespuesta(out cmd);
+            if (respuesta == "LOGIN_OK") { _usuarioActual = usuario; Console.WriteLine("Login exitoso."); }
+            else Console.WriteLine("Login fallido.");
+        }
+
+        private void PublicarArticulo()
+        {
+            Console.Write("Título: "); string titulo = Console.ReadLine();
+            Console.Write("Descripción: "); string descripcion = Console.ReadLine();
+            Console.Write("Categoría: "); string categoria = Console.ReadLine();
+            Console.Write("Precio base: "); string precio = Console.ReadLine();
+            Console.Write("Fecha cierre (dd-MM-yyyy HH:mm): "); string fecha = Console.ReadLine();
+
+            string datos = $"{titulo}|{descripcion}|{categoria}|{precio}|{fecha}";
+            _cliente.EnviarComando(CommandConstants.PublicarArticulo, datos);
+            int cmd;
+            string respuesta = _cliente.RecibirRespuesta(out cmd);
+            if (respuesta.Contains("fue publicado correctamente"))
+                Console.WriteLine(respuesta);
             else
-            {
-                Console.WriteLine("Opción inválida.");
-            }
+                Console.WriteLine("Error al publicar.");
+
+            Console.WriteLine($"Servidor respondió: {respuesta}");
         }
     }
 }
+
+

@@ -2,10 +2,9 @@
 
 namespace Common
 {
-    public class NetworkHelper
+       public class NetworkHelper
     {
         private readonly Socket _socket;
-
         public NetworkHelper(Socket socket) => _socket = socket;
 
         public void Send(byte[] data)
@@ -19,15 +18,15 @@ namespace Common
             }
         }
 
-        public byte[] Receive(int dataLength)
+        public byte[] Receive(int length)
         {
-            byte[] buffer = new byte[dataLength];
+            byte[] buffer = new byte[length];
             int offset = 0;
-            while (offset < dataLength)
+            while (offset < length)
             {
-                int received = _socket.Receive(buffer, offset, dataLength - offset, SocketFlags.None);
-                if (received == 0) throw new SocketException();
-                offset += received;
+                int rec = _socket.Receive(buffer, offset, length - offset, SocketFlags.None);
+                if (rec == 0) throw new SocketException();
+                offset += rec;
             }
             return buffer;
         }
