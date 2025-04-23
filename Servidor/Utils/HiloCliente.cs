@@ -13,6 +13,9 @@ namespace Servidor.Utils
         private UsuarioServicio _us;
         private bool _activo = true;
         private ArticuloServicio _articuloServicio = new();
+        private string _archivoActualNombre = "";
+        private long _archivoActualTamanio = 0;
+        private long _archivoActualOffset = 0;
 
         public HiloCliente(Socket socket, int id)
         {
@@ -29,7 +32,8 @@ namespace Servidor.Utils
                     string header = Encoding.UTF8.GetString(helper.Receive(ProtocolConstants.HEADER_SIZE));
                     int cmd = int.Parse(Encoding.UTF8.GetString(helper.Receive(ProtocolConstants.CMD_SIZE)));
                     int len = BitConverter.ToInt32(helper.Receive(ProtocolConstants.LENGTH_SIZE));
-                    string data = Encoding.UTF8.GetString(helper.Receive(len));
+                    byte[] rawData = helper.Receive(len);
+                    string data = Encoding.UTF8.GetString(rawData);
 
                     string resp = "";
                     switch (cmd)
@@ -48,6 +52,7 @@ namespace Servidor.Utils
                                 resp = "LOGIN_FAIL";
                             }
                             break;
+
                         case CommandConstants.PublicarArticulo:
                             {
                                 string user = $"cliente_{_id}";
@@ -67,15 +72,61 @@ namespace Servidor.Utils
                                 break;
                             }
 
+                        case CommandConstants.EnviarImagenHeader:
+                            {
+                                int nameLen = BitConverter.ToInt32(rawData, 0);
+                                string filename = Encoding.UTF8.GetString(rawData, 4, nameLen);
+                                long fileSize = BitConverter.ToInt64(rawData, 4 + nameLen);
+
+                                _archivoActualNombre = filename;
+                                _archivoActualTamanio = fileSize;
+                                _archivoActualOffset = 0;
+
+                                Logger.Log($"[Cliente {_id}] Recibiendo archivo '{filename}' ({fileSize} bytes)");
+                                break;
+                            }
+
+                        case CommandConstants.EnviarImagenParte:
+                            {
+                                if (string.IsNullOrEmpty(_archivoActualNombre))
+                                {
+                                    Logger.Error("No se recibió el encabezado del archivo antes de recibir partes.");
+                                    break;
+                                }
+
+                                new FileStreamHelper().Write(_archivoActualNombre, rawData);
+                                _archivoActualOffset += rawData.Length;
+
+                                if (_archivoActualOffset >= _archivoActualTamanio)
+                                {
+                                    Logger.Log($"[Cliente {_id}] Imagen '{_archivoActualNombre}' recibida completamente.");
+                                    _archivoActualNombre = "";
+                                    _archivoActualTamanio = 0;
+                                    _archivoActualOffset = 0;
+                                }
+
+                                break;
+                            }
+                        case CommandConstants.ValidarArticulo:
+                            {
+                                string validacion = _articuloServicio.ValidarDatosArticulo(data);
+                                resp = validacion;
+                                break;
+                            }
+
                         default:
                             resp = "CMD_DESCONOCIDO";
                             break;
                     }
-                    byte[] rb = Encoding.UTF8.GetBytes(resp);
-                    helper.Send(Encoding.UTF8.GetBytes("RES"));
-                    helper.Send(Encoding.UTF8.GetBytes(cmd.ToString("D2")));
-                    helper.Send(BitConverter.GetBytes(rb.Length));
-                    helper.Send(rb);
+
+                    if (!string.IsNullOrEmpty(resp))
+                    {
+                        byte[] rb = Encoding.UTF8.GetBytes(resp);
+                        helper.Send(Encoding.UTF8.GetBytes("RES"));
+                        helper.Send(Encoding.UTF8.GetBytes(cmd.ToString("D2")));
+                        helper.Send(BitConverter.GetBytes(rb.Length));
+                        helper.Send(rb);
+                    }
                 }
             }
             catch { /* cierre intencional o error */ }

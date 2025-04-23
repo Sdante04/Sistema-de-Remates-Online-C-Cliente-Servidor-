@@ -49,10 +49,22 @@ namespace Cliente
             Console.Write("Precio base: "); string precio = Console.ReadLine();
             Console.Write("Fecha cierre (dd-MM-yyyy HH:mm): "); string fecha = Console.ReadLine();
 
+            // Validar antes de enviar imagen
+            string datosParaValidar = $"{titulo}|{descripcion}|{categoria}|{precio}|{fecha}|";
+            _cliente.EnviarComando(CommandConstants.ValidarArticulo, datosParaValidar);
+            int cmdValidacion;
+            string validacion = _cliente.RecibirRespuesta(out cmdValidacion);
+
+            if (validacion != "VALIDO")
+            {
+                Console.WriteLine("Error en los datos del artículo. No se enviará la imagen ni se publicará.");
+                return;
+            }
+
+            // Si es válido, pedir y enviar imagen
             Console.Write("¿Deseas agregar una imagen al artículo? (S/N): ");
             string agregarImagen = Console.ReadLine()?.Trim().ToUpper();
-            string imagenBase64 = "";
-
+            string nombreArchivoImagen = "";
             if (agregarImagen == "S")
             {
                 Console.Write("Ruta de la imagen: ");
@@ -61,29 +73,31 @@ namespace Cliente
                 {
                     try
                     {
-                        byte[] bytes = File.ReadAllBytes(ruta);
-                        imagenBase64 = Convert.ToBase64String(bytes);
+                        nombreArchivoImagen = Path.GetFileName(ruta);
+                        _cliente.EnviarArchivoPorPartes(ruta);
                     }
                     catch
                     {
-                        Console.WriteLine("Error al leer el archivo. No se agregará imagen.");
+                        Console.WriteLine("Error al leer o enviar el archivo. Se continuará sin imagen.");
+                        nombreArchivoImagen = "";
                     }
                 }
                 else
                 {
-                    Console.WriteLine("Archivo no encontrado, no se agregará imagen.");
+                    Console.WriteLine("Archivo no encontrado. Se continuará sin imagen.");
                 }
             }
 
-            string datos = $"{titulo}|{descripcion}|{categoria}|{precio}|{fecha}|{imagenBase64}";
+            // Publicar artículo
+            string datos = $"{titulo}|{descripcion}|{categoria}|{precio}|{fecha}|{nombreArchivoImagen}";
             _cliente.EnviarComando(CommandConstants.PublicarArticulo, datos);
             int cmd;
             string respuesta = _cliente.RecibirRespuesta(out cmd);
 
             if (!respuesta.Contains("fue publicado correctamente"))
-                Console.WriteLine("Error al publicar.");
+                Console.WriteLine($"Error al publicar: {respuesta}");
             else
-            Console.WriteLine($"Servidor respondió: {respuesta}");
+                Console.WriteLine($"{respuesta}");
         }
 
     }

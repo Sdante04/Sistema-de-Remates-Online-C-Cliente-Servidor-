@@ -1,17 +1,11 @@
 ﻿using Servidor.Dominio;
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Servidor.Servicios
 {
     public class ArticuloServicio
     {
         private List<Articulo> _articulos = new();
-
 
         public string PublicarArticulo(string datos, string usuario, out bool esExitoso)
         {
@@ -25,16 +19,16 @@ namespace Servidor.Servicios
             string categoria = partes[2];
             string precioStr = partes[3];
             string fechaStr = partes[4];
-            string imagenBase64 = partes.Length > 5 ? partes[5] : null;
+            string nombreArchivo = partes.Length > 5 ? partes[5] : null;
+
+            if (string.IsNullOrWhiteSpace(titulo) || string.IsNullOrWhiteSpace(descripcion) || string.IsNullOrWhiteSpace(categoria))
+                return "Título, descripción y categoría son obligatorios.";
 
             if (!int.TryParse(precioStr, out int precioBase))
-                return "Precio base inválido.";
+                return "Precio base inválido. Debe ser un número entero.";
 
             if (!DateTime.TryParseExact(fechaStr, "dd-MM-yyyy HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime fechaCierre))
-                return "Fecha de cierre inválida. Use formato dd-MM-yyyy HH:mm.";
-
-            if (!string.IsNullOrEmpty(imagenBase64) && imagenBase64.Length > 1000000)
-                return "La imagen es demasiado grande.";
+                return "Fecha de cierre inválida. Usa el formato dd-MM-yyyy HH:mm.";
 
             Articulo nuevo = new()
             {
@@ -43,7 +37,7 @@ namespace Servidor.Servicios
                 Categoria = categoria,
                 PrecioBase = precioBase,
                 FechaCierre = fechaCierre,
-                ImagenBase64 = imagenBase64,
+                ImagenNombreArchivo = nombreArchivo,
                 Usuario = usuario
             };
 
@@ -51,5 +45,13 @@ namespace Servidor.Servicios
             esExitoso = true;
             return $"El artículo '{titulo}' fue publicado correctamente.";
         }
+
+        public string ValidarDatosArticulo(string datos)
+        {
+            bool ok;
+            PublicarArticulo(datos, "temporal", out ok);
+            return ok ? "VALIDO" : "INVALIDO";
+        }
+
     }
 }

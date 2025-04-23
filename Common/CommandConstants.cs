@@ -12,6 +12,11 @@ namespace Common
         {
             public const int PublicarArticulo = 1;
             public const int Login = 2;
+            public const int EnviarImagenHeader = 3;
+            public const int EnviarImagenParte = 4;
+            public const int ValidarArticulo = 5;
+
+
         }
     }
 

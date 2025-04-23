@@ -13,7 +13,7 @@ namespace Servidor.Dominio
         public string Categoria { get; set; }
         public int PrecioBase { get; set; }
         public DateTime FechaCierre { get; set; }
-        public string? ImagenBase64 { get; set; } // Opcional
-        public string Usuario { get; set; } // Para asociar al publicador, falta crear entidad usuario y service.
+        public string? ImagenNombreArchivo { get; set; }
+        public string Usuario { get; set; }
     }
 }
