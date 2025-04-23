@@ -36,15 +36,12 @@ public class Server
     {
         FileStreamHelper fsHelper = new();
 
-        // PARTE 1: largo del nombre
         int nameLen = BitConverter.ToInt32(helper.Receive(Protocolo.LargoFijo), 0);
         string filename = Encoding.UTF8.GetString(helper.Receive(nameLen));
 
-        // PARTE 2: largo del archivo
         long fileSize = BitConverter.ToInt64(helper.Receive(Protocolo.LargoFijoArchivo), 0);
         long totalParts = Protocolo.CalcularCantidadDePartes(fileSize);
 
-        // PARTE 3: recibir en partes
         long offset = 0;
         long currentPart = 1;
 

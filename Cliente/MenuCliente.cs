@@ -19,12 +19,14 @@ namespace Cliente
             {
                 Console.WriteLine("\n1. Login");
                 Console.WriteLine("2. Publicar artículo");
+                Console.WriteLine("3. Editar artículo");
                 Console.WriteLine("0. Salir");
                 Console.Write("Opción: ");
                 string op = Console.ReadLine();
 
                 if (op == "1") Login();
                 else if (op == "2" && !string.IsNullOrEmpty(_usuarioActual)) PublicarArticulo();
+                else if (op == "3" && !string.IsNullOrEmpty(_usuarioActual)) EditarArticulo();
                 else if (op == "0") { Console.WriteLine("Conexión terminada."); break; }
                 else Console.WriteLine("Opción inválida o no autenticado.");
             }
@@ -49,7 +51,6 @@ namespace Cliente
             Console.Write("Precio base: "); string precio = Console.ReadLine();
             Console.Write("Fecha cierre (dd-MM-yyyy HH:mm): "); string fecha = Console.ReadLine();
 
-            // Validar antes de enviar imagen
             string datosParaValidar = $"{titulo}|{descripcion}|{categoria}|{precio}|{fecha}|";
             _cliente.EnviarComando(CommandConstants.ValidarArticulo, datosParaValidar);
             int cmdValidacion;
@@ -61,7 +62,6 @@ namespace Cliente
                 return;
             }
 
-            // Si es válido, pedir y enviar imagen
             Console.Write("¿Deseas agregar una imagen al artículo? (S/N): ");
             string agregarImagen = Console.ReadLine()?.Trim().ToUpper();
             string nombreArchivoImagen = "";
@@ -88,7 +88,6 @@ namespace Cliente
                 }
             }
 
-            // Publicar artículo
             string datos = $"{titulo}|{descripcion}|{categoria}|{precio}|{fecha}|{nombreArchivoImagen}";
             _cliente.EnviarComando(CommandConstants.PublicarArticulo, datos);
             int cmd;
@@ -99,6 +98,90 @@ namespace Cliente
             else
                 Console.WriteLine($"{respuesta}");
         }
+
+        private void EditarArticulo()
+        {
+            _cliente.EnviarComando(CommandConstants.ObtenerArticulosUsuario, "");
+            int cmd;
+            string respuesta = _cliente.RecibirRespuesta(out cmd);
+
+            if (respuesta == "SIN_ARTICULOS")
+            {
+                Console.WriteLine("No tienes artículos para editar.");
+                return;
+            }
+
+            Console.WriteLine("Tus artículos:");
+            Console.WriteLine(respuesta);
+
+            Console.Write("Selecciona el número del artículo a editar (o 0 para volver): ");
+            string seleccion = Console.ReadLine();
+            if (seleccion == "0") return;
+
+            Console.WriteLine("¿Qué deseas editar?");
+            Console.WriteLine("1. Título");
+            Console.WriteLine("2. Descripción");
+            Console.WriteLine("3. Categoría");
+            Console.WriteLine("4. Precio base");
+            Console.WriteLine("5. Fecha de cierre");
+            Console.WriteLine("6. Imagen");
+            Console.WriteLine("0. Volver sin editar");
+
+            string nuevoTitulo = "", descripcion = "", categoria = "", precio = "", fecha = "", imagen = "";
+
+            while (true)
+            {
+                Console.Write("Selecciona opción a editar (0 para finalizar): ");
+                string opcion = Console.ReadLine();
+                if (opcion == "0") break;
+
+                switch (opcion)
+                {
+                    case "1":
+                        Console.Write("Nuevo título: ");
+                        nuevoTitulo = Console.ReadLine();
+                        break;
+                    case "2":
+                        Console.Write("Nueva descripción: ");
+                        descripcion = Console.ReadLine();
+                        break;
+                    case "3":
+                        Console.Write("Nueva categoría: ");
+                        categoria = Console.ReadLine();
+                        break;
+                    case "4":
+                        Console.Write("Nuevo precio base: ");
+                        precio = Console.ReadLine();
+                        break;
+                    case "5":
+                        Console.Write("Nueva fecha cierre (dd-MM-yyyy HH:mm): ");
+                        fecha = Console.ReadLine();
+                        break;
+                    case "6":
+                        Console.Write("Ruta de la nueva imagen: ");
+                        string ruta = Console.ReadLine();
+                        if (File.Exists(ruta))
+                        {
+                            imagen = Path.GetFileName(ruta);
+                            _cliente.EnviarArchivoPorPartes(ruta);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Archivo no encontrado. Se omitirá la imagen.");
+                        }
+                        break;
+                    default:
+                        Console.WriteLine("Opción inválida.");
+                        break;
+                }
+            }
+
+            string datos = $"{seleccion}|{nuevoTitulo}|{descripcion}|{categoria}|{precio}|{fecha}|{imagen}";
+            _cliente.EnviarComando(CommandConstants.EditarArticulo, datos);
+            string resultado = _cliente.RecibirRespuesta(out cmd);
+            Console.WriteLine(resultado);
+        }
+
 
     }
 }

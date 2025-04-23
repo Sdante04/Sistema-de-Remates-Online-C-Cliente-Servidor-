@@ -114,6 +114,25 @@ namespace Servidor.Utils
                                 break;
                             }
 
+                        case CommandConstants.ObtenerArticulosUsuario:
+                            {
+                                string user = $"cliente_{_id}";
+                                resp = _articuloServicio.ObtenerArticulosDeUsuario(user);
+                                break;
+                            }
+
+                        case CommandConstants.EditarArticulo:
+                            {
+                                string user = $"cliente_{_id}";
+                                bool ok;
+                                string mensaje = _articuloServicio.EditarArticulo(data, user, out ok);
+                                resp = mensaje;
+                                if (ok)
+                                    Logger.Log($"[Cliente {_id}] Usuario '{user}' editó un artículo.");
+                                else
+                                    Logger.Warn($"[Cliente {_id}] Fallo al editar artículo: {mensaje}");
+                                break;
+                            }
                         default:
                             resp = "CMD_DESCONOCIDO";
                             break;

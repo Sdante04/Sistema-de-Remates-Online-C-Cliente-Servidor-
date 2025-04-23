@@ -15,7 +15,8 @@ namespace Common
             public const int EnviarImagenHeader = 3;
             public const int EnviarImagenParte = 4;
             public const int ValidarArticulo = 5;
-
+            public const int ObtenerArticulosUsuario = 6;
+            public const int EditarArticulo = 7;
 
         }
     }
