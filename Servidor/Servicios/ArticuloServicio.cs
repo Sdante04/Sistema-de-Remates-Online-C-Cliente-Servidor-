@@ -73,6 +73,8 @@ namespace Servidor.Servicios
 
         public string ObtenerArticulosDeUsuario(string usuario)
         {
+            ActualizarEstadoRemates();
+
             var articulos = _articulos.Where(a => a.Usuario == usuario).ToList();
             if (!articulos.Any()) return "SIN_ARTICULOS";
 
@@ -87,7 +89,9 @@ namespace Servidor.Servicios
 
         public string ObtenerTodosLosArticulosEnRemate()
         {
-            var remates = _articulos.Where(a => a.FechaCierre > DateTime.Now).ToList();
+            ActualizarEstadoRemates();
+
+            var remates = _articulos.Where(a => !a.Finalizado).ToList(); 
             if (!remates.Any()) return "SIN_ARTICULOS";
 
             var sb = new StringBuilder();
@@ -176,10 +180,12 @@ namespace Servidor.Servicios
 
         public string ConsultarArticulo(string indiceStr)
         {
+            ActualizarEstadoRemates();
+
             if (!int.TryParse(indiceStr, out int indice))
                 return "Índice inválido.";
 
-            var remates = _articulos.Where(a => a.FechaCierre > DateTime.Now).ToList();
+            var remates = _articulos.ToList();
             if (indice < 1 || indice > remates.Count)
                 return "Índice fuera de rango.";
 
@@ -203,6 +209,9 @@ namespace Servidor.Servicios
             sb.AppendLine($"Fecha de cierre: {a.FechaCierre:dd-MM-yyyy HH:mm}");
             if (!string.IsNullOrEmpty(a.ImagenNombreArchivo))
                 sb.AppendLine($"Imagen asociada: {a.ImagenNombreArchivo}");
+            sb.AppendLine($"Estado: {(a.Finalizado ? "Finalizado" : "Activo")}");
+            if (a.Finalizado && !string.IsNullOrEmpty(a.UsuarioGanador))
+                sb.AppendLine($"Ganador: {a.UsuarioGanador}");
             return sb.ToString();
         }
 
@@ -255,6 +264,39 @@ namespace Servidor.Servicios
             }
 
             return string.Join(", ", partes);
+        }
+
+        private void ActualizarEstadoRemates()
+        {
+            foreach (var articulo in _articulos)
+            {
+                if (!articulo.Finalizado && articulo.FechaCierre <= DateTime.Now)
+                {
+                    articulo.Finalizado = true;
+
+                    if (articulo.Ofertas.Any())
+                    {
+                        var mejorOferta = articulo.Ofertas.OrderByDescending(o => o.Monto).First();
+                        articulo.UsuarioGanador = mejorOferta.Usuario;
+                    }
+                }
+            }
+        }
+
+        public string ObtenerTodosLosArticulos()
+        {
+            ActualizarEstadoRemates();
+
+            if (!_articulos.Any()) return "SIN_ARTICULOS";
+
+            var sb = new StringBuilder();
+            for (int i = 0; i < _articulos.Count; i++)
+            {
+                var a = _articulos[i];
+                sb.AppendLine($"{i + 1}. {a.Titulo} | Descripción: {a.Descripcion} | Categoría: {a.Categoria} | Precio: {a.PrecioBase} | Cierra: {a.FechaCierre:dd-MM-yyyy HH:mm} | Estado: {(a.Finalizado ? "Finalizado" : "Activo")}");
+            }
+
+            return sb.ToString();
         }
 
     }

@@ -17,13 +17,32 @@ namespace Cliente
         {
             while (true)
             {
-                Console.WriteLine("\n1. Login");
-                Console.WriteLine("2. Publicar artículo");
-                Console.WriteLine("3. Editar artículo");
-                Console.WriteLine("4. Realizar oferta");
-                Console.WriteLine("5. Consultar artículo");
-                Console.WriteLine("0. Salir");
-                Console.Write("Opción: ");
+                Console.ForegroundColor = ConsoleColor.DarkBlue;
+                Console.WriteLine(" ═════════════════════════════");
+                Console.WriteLine("║  MENÚ PRINCIPAL DE CLIENTE  ║");
+                Console.WriteLine(" ═════════════════════════════");
+                Console.ResetColor();
+
+                Console.WriteLine(" 1.  Login");
+                Console.WriteLine(" 2.  Publicar artículo");
+                Console.WriteLine(" 3.  Editar artículo");
+                Console.WriteLine(" 4.  Realizar oferta");
+                Console.WriteLine(" 5.  Consultar artículo");
+                Console.WriteLine(" 0.  Salir");
+
+                if (!string.IsNullOrEmpty(_usuarioActual))
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"\nSesión activa como: {_usuarioActual}");
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine("\n No has iniciado sesión.");
+                }
+                Console.ResetColor();
+
+                Console.Write("\nSelecciona una opción: ");
                 string op = Console.ReadLine();
 
                 if (op == "1") Login();
@@ -31,9 +50,23 @@ namespace Cliente
                 else if (op == "3" && !string.IsNullOrEmpty(_usuarioActual)) EditarArticulo();
                 else if (op == "4" && !string.IsNullOrEmpty(_usuarioActual)) RealizarOferta();
                 else if (op == "5" && !string.IsNullOrEmpty(_usuarioActual)) ConsultarArticulo();
-                else if (op == "0") { Console.WriteLine("Conexión terminada."); break; }
-                else Console.WriteLine("Opción inválida o no autenticado.");
+                else if (op == "0")
+                {
+                    Console.WriteLine("Conexión terminada.");
+                    break;
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Opción inválida o no autenticado.");
+                    Console.ResetColor();
+                }
+
+                Console.WriteLine("\nPresiona una tecla para volver al menú...");
+                Console.ReadKey();
+                Console.Clear();
             }
+
         }
 
         private void Login()
@@ -192,15 +225,25 @@ namespace Cliente
             _cliente.EnviarComando(CommandConstants.ListarArticulosRemate, "");
             int cmd;
             string respuesta = _cliente.RecibirRespuesta(out cmd);
+
+            if (string.IsNullOrWhiteSpace(respuesta) || respuesta == "SIN_ARTICULOS")
+            {
+                Console.WriteLine("No hay artículos activos en remate para ofertar.");
+                return;
+            }
+
             Console.WriteLine(respuesta);
 
             var lineas = respuesta.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
             int cantidad = lineas.Length;
 
             Console.Write("Número del artículo a ofertar: ");
+
             if (!int.TryParse(Console.ReadLine(), out int indice) || indice < 1 || indice > cantidad)
             {
-                Console.WriteLine("Índice inválido.");
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("\nÍndice inválido.");
+                Console.ResetColor();
                 return;
             }
             Console.Write("Monto ofertado: ");
@@ -213,25 +256,37 @@ namespace Cliente
 
         private void ConsultarArticulo()
         {
-            Console.WriteLine("Lista de artículos en remate:");
-            _cliente.EnviarComando(CommandConstants.ListarArticulosRemate, "");
+            Console.WriteLine("Lista de artículos:");
+            _cliente.EnviarComando(CommandConstants.ListarTodosLosArticulos, "");
             int cmd;
             string respuesta = _cliente.RecibirRespuesta(out cmd);
-            Console.WriteLine(respuesta);
 
             var lineas = respuesta.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-            if (lineas.Length == 0 || respuesta == "SIN_ARTICULOS")
+            if (string.IsNullOrWhiteSpace(respuesta) || respuesta == "SIN_ARTICULOS")
             {
                 Console.WriteLine("No hay artículos disponibles.");
                 return;
             }
 
+            Console.WriteLine(respuesta);
+
             Console.Write("Número del artículo a consultar: ");
             string seleccion = Console.ReadLine();
             _cliente.EnviarComando(CommandConstants.ConsultarArticulo, seleccion);
             string detalle = _cliente.RecibirRespuesta(out cmd);
-            Console.WriteLine("\n=== Detalles del artículo ===");
-            Console.WriteLine(detalle);
+
+            if (detalle == "Índice fuera de rango." || detalle == "Índice inválido.")
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"\n{detalle}");
+                Console.ResetColor();
+            }
+            else
+            {
+                Console.WriteLine("\n=== Detalles del artículo ===");
+                Console.WriteLine(detalle);
+            }
+
         }
 
     }

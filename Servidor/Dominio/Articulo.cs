@@ -11,6 +11,8 @@ namespace Servidor.Dominio
         public string? ImagenNombreArchivo { get; set; }
         public string Usuario { get; set; }
         public List<Oferta> Ofertas { get; set; } = new();
+        public bool Finalizado { get; set; } = false;
+        public string? UsuarioGanador { get; set; }
 
     }
 }

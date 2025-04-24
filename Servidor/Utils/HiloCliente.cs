@@ -158,6 +158,11 @@ namespace Servidor.Utils
                                 resp = respuesta;
                                 break;
                             }
+                        case CommandConstants.ListarTodosLosArticulos:
+                            {
+                                resp = _articuloServicio.ObtenerTodosLosArticulos();
+                                break;
+                            }
                         default:
                             resp = "CMD_DESCONOCIDO";
                             break;
