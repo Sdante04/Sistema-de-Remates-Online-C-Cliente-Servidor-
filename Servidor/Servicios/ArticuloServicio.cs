@@ -173,5 +173,41 @@ namespace Servidor.Servicios
 
             return $"Oferta registrada: {montoOfertado} por {usuario} para '{articulo.Titulo}'";
         }
+
+        public string ConsultarArticulo(string indiceStr)
+        {
+            if (!int.TryParse(indiceStr, out int indice))
+                return "Índice inválido.";
+
+            var remates = _articulos.Where(a => a.FechaCierre > DateTime.Now).ToList();
+            if (indice < 1 || indice > remates.Count)
+                return "Índice fuera de rango.";
+
+            var a = remates[indice - 1];
+            StringBuilder sb = new();
+            sb.AppendLine($"Título: {a.Titulo}");
+            sb.AppendLine($"Descripción: {a.Descripcion}");
+            sb.AppendLine($"Categoría: {a.Categoria}");
+            sb.AppendLine($"Precio base: {a.PrecioBase}");
+            sb.AppendLine($"Fecha de cierre: {a.FechaCierre:dd-MM-yyyy HH:mm}");
+
+            TimeSpan tiempoRestante = a.FechaCierre - DateTime.Now;
+            sb.AppendLine($"Tiempo restante: {tiempoRestante.Hours}h {tiempoRestante.Minutes}m");
+
+            if (!string.IsNullOrEmpty(a.ImagenNombreArchivo))
+                sb.AppendLine($"Imagen asociada: {a.ImagenNombreArchivo}");
+
+            sb.AppendLine("Historial de ofertas:");
+            if (a.Ofertas.Count == 0)
+                sb.AppendLine("  (Sin ofertas aún)");
+            else
+            {
+                foreach (var oferta in a.Ofertas.OrderByDescending(o => o.Fecha))
+                    sb.AppendLine($"  - {oferta.Usuario} ofertó {oferta.Monto} el {oferta.Fecha:dd-MM-yyyy HH:mm}");
+            }
+
+            return sb.ToString();
+        }
+
     }
 }
