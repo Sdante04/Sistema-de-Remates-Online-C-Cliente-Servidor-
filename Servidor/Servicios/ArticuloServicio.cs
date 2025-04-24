@@ -1,5 +1,6 @@
 ﻿using Servidor.Dominio;
 using System.Globalization;
+using System.Text;
 
 namespace Servidor.Servicios
 {
@@ -46,11 +47,28 @@ namespace Servidor.Servicios
             return $"El artículo '{titulo}' fue publicado correctamente.";
         }
 
-        public string ValidarDatosArticulo(string datos)
+        public bool ValidarDatosArticulo(string datos)
         {
-            bool ok;
-            PublicarArticulo(datos, "temporal", out ok);
-            return ok ? "VALIDO" : "INVALIDO";
+            var partes = datos.Split('|');
+            if (partes.Length < 5)
+                return false;
+
+            string titulo = partes[0];
+            string descripcion = partes[1];
+            string categoria = partes[2];
+            string precioStr = partes[3];
+            string fechaStr = partes[4];
+
+            if (string.IsNullOrWhiteSpace(titulo) || string.IsNullOrWhiteSpace(descripcion) || string.IsNullOrWhiteSpace(categoria))
+                return false;
+
+            if (!int.TryParse(precioStr, out _))
+                return false;
+
+            if (!DateTime.TryParseExact(fechaStr, "dd-MM-yyyy HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+                return false;
+
+            return true;
         }
 
         public string ObtenerArticulosDeUsuario(string usuario)
@@ -58,12 +76,27 @@ namespace Servidor.Servicios
             var articulos = _articulos.Where(a => a.Usuario == usuario).ToList();
             if (!articulos.Any()) return "SIN_ARTICULOS";
 
-            var sb = new System.Text.StringBuilder();
+            var sb = new StringBuilder();
             for (int i = 0; i < articulos.Count; i++)
             {
                 var a = articulos[i];
                 sb.AppendLine($"{i + 1}. {a.Titulo} | Descripción: {a.Descripcion} | Categoría: {a.Categoria} | Precio: {a.PrecioBase} | Cierra: {a.FechaCierre:dd-MM-yyyy HH:mm}");
             }
+            return sb.ToString();
+        }
+
+        public string ObtenerTodosLosArticulosEnRemate()
+        {
+            var remates = _articulos.Where(a => a.FechaCierre > DateTime.Now).ToList();
+            if (!remates.Any()) return "SIN_ARTICULOS";
+
+            var sb = new StringBuilder();
+            for (int i = 0; i < remates.Count; i++)
+            {
+                var a = remates[i];
+                sb.AppendLine($"{i + 1}. {a.Titulo} | Descripción: {a.Descripcion} | Categoría: {a.Categoria} | Precio: {a.PrecioBase} | Cierra: {a.FechaCierre:dd-MM-yyyy HH:mm}");
+            }
+
             return sb.ToString();
         }
 
@@ -106,6 +139,39 @@ namespace Servidor.Servicios
 
             exito = true;
             return $"Artículo '{articulo.Titulo}' editado correctamente.";
+        }
+
+        public string RealizarOferta(string datos, string usuario)
+        {
+            var partes = datos.Split('|');
+            if (partes.Length != 2)
+                return "Datos inválidos. Se esperaba: índice|monto";
+
+            if (!int.TryParse(partes[0], out int indice))
+                return "Índice inválido.";
+            if (!int.TryParse(partes[1], out int montoOfertado))
+                return "Monto inválido.";
+
+            var articulosEnRemate = _articulos.Where(a => a.FechaCierre > DateTime.Now).ToList();
+            if (indice < 1 || indice > articulosEnRemate.Count)
+                return "Índice fuera de rango.";
+
+            var articulo = articulosEnRemate[indice - 1];
+            int ofertaMaxima = articulo.Ofertas.Any() ? articulo.Ofertas.Max(o => o.Monto) : articulo.PrecioBase;
+
+            if (montoOfertado < articulo.PrecioBase)
+                return "La oferta es menor al precio base.";
+            if (montoOfertado < ofertaMaxima * 1.1)
+                return $"La oferta debe superar al menos un 10% la oferta máxima actual: {ofertaMaxima}";
+
+            articulo.Ofertas.Add(new Oferta
+            {
+                Usuario = usuario,
+                Monto = montoOfertado,
+                Fecha = DateTime.Now
+            });
+
+            return $"Oferta registrada: {montoOfertado} por {usuario} para '{articulo.Titulo}'";
         }
     }
 }
