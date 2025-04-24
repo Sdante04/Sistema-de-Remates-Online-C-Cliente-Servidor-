@@ -14,14 +14,15 @@ namespace Servidor.Utils
         private int _id;
         private UsuarioServicio _us;
         private bool _activo = true;
-        private ArticuloServicio _articuloServicio = new();
+        private ArticuloServicio _articuloServicio;
         private string _archivoActualNombre = "";
         private long _archivoActualTamanio = 0;
         private long _archivoActualOffset = 0;
 
-        public HiloCliente(Socket socket, int id)
+        public HiloCliente(Socket socket, int id, ArticuloServicio articuloServicio)
         {
             _socket = socket; _id = id; _us = new UsuarioServicio();
+            _articuloServicio = articuloServicio;
         }
 
         public void Atender()
@@ -111,8 +112,8 @@ namespace Servidor.Utils
                             }
                         case CommandConstants.ValidarArticulo:
                             {
-                                string validacion = _articuloServicio.ValidarDatosArticulo(data);
-                                resp = validacion;
+                                bool esValido = _articuloServicio.ValidarDatosArticulo(data);
+                                resp = esValido ? "VALIDO" : "INVALIDO";
                                 break;
                             }
 
@@ -133,6 +134,22 @@ namespace Servidor.Utils
                                     Logger.Log($"[Cliente {_id}] Usuario '{user}' editó un artículo.");
                                 else
                                     Logger.Warn($"[Cliente {_id}] Fallo al editar artículo: {mensaje}");
+                                break;
+                            }
+                        case CommandConstants.RealizarOferta:
+                            {
+                                string user = $"cliente_{_id}";
+                                string respuesta = _articuloServicio.RealizarOferta(data, user);
+                                resp = respuesta;
+                                if (resp.Contains("Oferta registrada:"))
+                                    Logger.Log($"[Cliente {_id}] {respuesta}");
+                                else
+                                    Logger.Warn($"[Cliente {_id}] {respuesta}");
+                                break;
+                            }
+                        case CommandConstants.ListarArticulosRemate:
+                            {
+                                resp = _articuloServicio.ObtenerTodosLosArticulosEnRemate();
                                 break;
                             }
                         default:
