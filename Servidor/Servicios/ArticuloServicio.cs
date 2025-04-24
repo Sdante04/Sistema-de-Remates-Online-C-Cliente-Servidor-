@@ -185,18 +185,30 @@ namespace Servidor.Servicios
 
             var a = remates[indice - 1];
             StringBuilder sb = new();
+
+            sb.Append(GenerarDetalleBasico(a));
+            sb.AppendLine($"Tiempo restante: {ObtenerTiempoRestante(a.FechaCierre)}");
+            sb.AppendLine(GenerarHistorialOfertas(a));
+
+            return sb.ToString();
+        }
+
+        private string GenerarDetalleBasico(Articulo a)
+        {
+            StringBuilder sb = new();
             sb.AppendLine($"Título: {a.Titulo}");
             sb.AppendLine($"Descripción: {a.Descripcion}");
             sb.AppendLine($"Categoría: {a.Categoria}");
             sb.AppendLine($"Precio base: {a.PrecioBase}");
             sb.AppendLine($"Fecha de cierre: {a.FechaCierre:dd-MM-yyyy HH:mm}");
-
-            TimeSpan tiempoRestante = a.FechaCierre - DateTime.Now;
-            sb.AppendLine($"Tiempo restante: {tiempoRestante.Hours}h {tiempoRestante.Minutes}m");
-
             if (!string.IsNullOrEmpty(a.ImagenNombreArchivo))
                 sb.AppendLine($"Imagen asociada: {a.ImagenNombreArchivo}");
+            return sb.ToString();
+        }
 
+        private string GenerarHistorialOfertas(Articulo a)
+        {
+            StringBuilder sb = new();
             sb.AppendLine("Historial de ofertas:");
             if (a.Ofertas.Count == 0)
                 sb.AppendLine("  (Sin ofertas aún)");
@@ -205,8 +217,44 @@ namespace Servidor.Servicios
                 foreach (var oferta in a.Ofertas.OrderByDescending(o => o.Fecha))
                     sb.AppendLine($"  - {oferta.Usuario} ofertó {oferta.Monto} el {oferta.Fecha:dd-MM-yyyy HH:mm}");
             }
-
             return sb.ToString();
+        }
+
+
+        private string ObtenerTiempoRestante(DateTime fechaCierre)
+        {
+            DateTime ahora = DateTime.Now;
+
+            if (fechaCierre <= ahora)
+                return "Remate finalizado.";
+
+            TimeSpan ts = fechaCierre - ahora;
+
+            int totalDias = ts.Days;
+            int totalHoras = ts.Hours;
+            int totalMinutos = ts.Minutes;
+
+            int años = totalDias / 365;
+            int meses = (totalDias % 365) / 30;
+            int dias = (totalDias % 365) % 30;
+
+            List<string> partes = new();
+
+            if (años > 0) partes.Add($"{años} año{(años > 1 ? "s" : "")}");
+            if (meses > 0) partes.Add($"{meses} mes{(meses > 1 ? "es" : "")}");
+            if (dias > 0) partes.Add($"{dias} día{(dias > 1 ? "s" : "")}");
+
+            if (totalDias == 0)
+            {
+                if (totalHoras > 0)
+                    partes.Add($"{totalHoras} hora{(totalHoras > 1 ? "s" : "")}");
+                else if (totalMinutos > 0)
+                    partes.Add($"{totalMinutos} minuto{(totalMinutos > 1 ? "s" : "")}");
+                else
+                    partes.Add("¡A punto de expirar!");
+            }
+
+            return string.Join(", ", partes);
         }
 
     }
