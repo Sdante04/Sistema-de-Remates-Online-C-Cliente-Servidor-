@@ -20,6 +20,7 @@ namespace Cliente
                 Console.WriteLine("\n1. Login");
                 Console.WriteLine("2. Publicar artículo");
                 Console.WriteLine("3. Editar artículo");
+                Console.WriteLine("4. Realizar oferta");
                 Console.WriteLine("0. Salir");
                 Console.Write("Opción: ");
                 string op = Console.ReadLine();
@@ -27,6 +28,7 @@ namespace Cliente
                 if (op == "1") Login();
                 else if (op == "2" && !string.IsNullOrEmpty(_usuarioActual)) PublicarArticulo();
                 else if (op == "3" && !string.IsNullOrEmpty(_usuarioActual)) EditarArticulo();
+                else if (op == "4" && !string.IsNullOrEmpty(_usuarioActual)) RealizarOferta();
                 else if (op == "0") { Console.WriteLine("Conexión terminada."); break; }
                 else Console.WriteLine("Opción inválida o no autenticado.");
             }
@@ -182,8 +184,31 @@ namespace Cliente
             Console.WriteLine(resultado);
         }
 
+        private void RealizarOferta()
+        {
+            Console.WriteLine("Lista de artículos en remate:");
+            _cliente.EnviarComando(CommandConstants.ListarArticulosRemate, "");
+            int cmd;
+            string respuesta = _cliente.RecibirRespuesta(out cmd);
+            Console.WriteLine(respuesta);
+
+            var lineas = respuesta.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+            int cantidad = lineas.Length;
+
+            Console.Write("Número del artículo a ofertar: ");
+            if (!int.TryParse(Console.ReadLine(), out int indice) || indice < 1 || indice > cantidad)
+            {
+                Console.WriteLine("Índice inválido.");
+                return;
+            }
+            Console.Write("Monto ofertado: ");
+            string monto = Console.ReadLine();
+
+            _cliente.EnviarComando(CommandConstants.RealizarOferta, $"{indice}|{monto}");
+            string resultado = _cliente.RecibirRespuesta(out cmd);
+            Console.WriteLine(resultado);
+        }
+
 
     }
 }
-
-

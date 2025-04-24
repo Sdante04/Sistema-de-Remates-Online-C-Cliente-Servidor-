@@ -17,6 +17,8 @@ namespace Common
             public const int ValidarArticulo = 5;
             public const int ObtenerArticulosUsuario = 6;
             public const int EditarArticulo = 7;
+            public const int RealizarOferta = 8;
+            public const int ListarArticulosRemate = 9;
 
         }
     }
