@@ -21,6 +21,7 @@ namespace Cliente
                 Console.WriteLine("2. Publicar artículo");
                 Console.WriteLine("3. Editar artículo");
                 Console.WriteLine("4. Realizar oferta");
+                Console.WriteLine("5. Consultar artículo");
                 Console.WriteLine("0. Salir");
                 Console.Write("Opción: ");
                 string op = Console.ReadLine();
@@ -29,6 +30,7 @@ namespace Cliente
                 else if (op == "2" && !string.IsNullOrEmpty(_usuarioActual)) PublicarArticulo();
                 else if (op == "3" && !string.IsNullOrEmpty(_usuarioActual)) EditarArticulo();
                 else if (op == "4" && !string.IsNullOrEmpty(_usuarioActual)) RealizarOferta();
+                else if (op == "5" && !string.IsNullOrEmpty(_usuarioActual)) ConsultarArticulo();
                 else if (op == "0") { Console.WriteLine("Conexión terminada."); break; }
                 else Console.WriteLine("Opción inválida o no autenticado.");
             }
