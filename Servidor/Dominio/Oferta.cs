@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Servidor.Dominio
+﻿public class Oferta
 {
-    public class Oferta
-    {
-    }
+    public string Usuario { get; set; }
+    public int Monto { get; set; }
+    public DateTime Fecha { get; set; }
 }

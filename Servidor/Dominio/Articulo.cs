@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+﻿
 namespace Servidor.Dominio
 {
     public class Articulo
@@ -15,5 +10,7 @@ namespace Servidor.Dominio
         public DateTime FechaCierre { get; set; }
         public string? ImagenNombreArchivo { get; set; }
         public string Usuario { get; set; }
+        public List<Oferta> Ofertas { get; set; } = new();
+
     }
 }
