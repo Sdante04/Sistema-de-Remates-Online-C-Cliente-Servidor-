@@ -211,6 +211,28 @@ namespace Cliente
             Console.WriteLine(resultado);
         }
 
+        private void ConsultarArticulo()
+        {
+            Console.WriteLine("Lista de artículos en remate:");
+            _cliente.EnviarComando(CommandConstants.ListarArticulosRemate, "");
+            int cmd;
+            string respuesta = _cliente.RecibirRespuesta(out cmd);
+            Console.WriteLine(respuesta);
+
+            var lineas = respuesta.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+            if (lineas.Length == 0 || respuesta == "SIN_ARTICULOS")
+            {
+                Console.WriteLine("No hay artículos disponibles.");
+                return;
+            }
+
+            Console.Write("Número del artículo a consultar: ");
+            string seleccion = Console.ReadLine();
+            _cliente.EnviarComando(CommandConstants.ConsultarArticulo, seleccion);
+            string detalle = _cliente.RecibirRespuesta(out cmd);
+            Console.WriteLine("\n=== Detalles del artículo ===");
+            Console.WriteLine(detalle);
+        }
 
     }
 }
