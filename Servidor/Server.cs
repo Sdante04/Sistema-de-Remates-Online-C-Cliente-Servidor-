@@ -4,6 +4,7 @@ using Servidor.Utils;
 using Common.Config;
 using Common;
 using System.Text;
+using Servidor.Servicios;
 
 namespace Servidor;
 
@@ -13,6 +14,7 @@ public class Server
     private static List<HiloCliente> _clientesActivos = new();
     private static bool _ejecutando = true;
     private static Socket? _socketServidor;
+    private static ArticuloServicio _articuloServicioCompartido = new();
 
     public static void Main()
     {
@@ -32,12 +34,12 @@ public class Server
         {
             try
             {
-                Socket socketCliente = _socketServidor.Accept(); 
+                Socket socketCliente = _socketServidor.Accept();
 
                 int idCliente = Interlocked.Increment(ref contadorClientes);
                 Logger.Log($"Nuevo cliente conectado (ID: {idCliente})");
 
-                var hiloCliente = new HiloCliente(socketCliente, idCliente);
+                var hiloCliente = new HiloCliente(socketCliente, idCliente, _articuloServicioCompartido);
                 _clientesActivos.Add(hiloCliente);
 
                 Thread hilo = new Thread(hiloCliente.Atender);
