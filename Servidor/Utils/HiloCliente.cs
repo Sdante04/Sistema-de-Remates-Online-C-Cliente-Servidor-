@@ -152,6 +152,12 @@ namespace Servidor.Utils
                                 resp = _articuloServicio.ObtenerTodosLosArticulosEnRemate();
                                 break;
                             }
+                        case CommandConstants.ConsultarArticulo:
+                            {
+                                string respuesta = _articuloServicio.ConsultarArticulo(data);
+                                resp = respuesta;
+                                break;
+                            }
                         default:
                             resp = "CMD_DESCONOCIDO";
                             break;
