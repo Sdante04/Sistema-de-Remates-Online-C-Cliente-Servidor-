@@ -92,18 +92,18 @@ public class Server
     {
         FileStreamHelper fsHelper = new();
 
-        int nameLen = BitConverter.ToInt32(helper.Receive(Protocolo.LargoFijo), 0);
+        int nameLen = BitConverter.ToInt32(helper.Receive(ProtocoloImagen.LargoFijo), 0);
         string filename = Encoding.UTF8.GetString(helper.Receive(nameLen));
 
-        long fileSize = BitConverter.ToInt64(helper.Receive(Protocolo.LargoFijoArchivo), 0);
-        long totalParts = Protocolo.CalcularCantidadDePartes(fileSize);
+        long fileSize = BitConverter.ToInt64(helper.Receive(ProtocoloImagen.LargoFijoArchivo), 0);
+        long totalParts = ProtocoloImagen.CalcularCantidadDePartes(fileSize);
 
         long offset = 0;
         long currentPart = 1;
 
         while (offset < fileSize)
         {
-            int bytesToReceive = (int)Math.Min(Protocolo.MaxFileSizePart, fileSize - offset);
+            int bytesToReceive = (int)Math.Min(ProtocoloImagen.MaxFileSizePart, fileSize - offset);
             Console.WriteLine($"Recibiendo parte {currentPart}/{totalParts}...");
             byte[] buffer = helper.Receive(bytesToReceive);
             fsHelper.Write(filename, buffer);
