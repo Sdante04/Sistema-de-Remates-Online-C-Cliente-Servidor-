@@ -299,5 +299,31 @@ namespace Servidor.Servicios
             return sb.ToString();
         }
 
+        public string ListarArticulosConImagen()
+        {
+            var conImagen = _articulos.Where(a => !string.IsNullOrEmpty(a.ImagenNombreArchivo)).ToList();
+            if (!conImagen.Any())
+                return "SIN_IMAGENES";
+
+            var sb = new StringBuilder();
+            for (int i = 0; i < conImagen.Count; i++)
+            {
+                var a = conImagen[i];
+                sb.AppendLine($"{i + 1}. {a.Titulo} | Imagen: {a.ImagenNombreArchivo}");
+            }
+            return sb.ToString();
+        }
+
+        public string? ObtenerNombreArchivoImagen(int index)
+        {
+            var conImagen = _articulos.Where(a => !string.IsNullOrEmpty(a.ImagenNombreArchivo)).ToList();
+            if (index >= 0 && index < conImagen.Count)
+            {
+                return conImagen[index].ImagenNombreArchivo;
+            }
+            return null;
+        }
+
+
     }
 }

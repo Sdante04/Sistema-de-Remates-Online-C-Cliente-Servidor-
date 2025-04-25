@@ -1,5 +1,4 @@
-﻿using System;
-using Common.Common;
+﻿using Common;
 
 namespace Cliente
 {
@@ -28,6 +27,7 @@ namespace Cliente
                 Console.WriteLine(" 3.  Editar artículo");
                 Console.WriteLine(" 4.  Realizar oferta");
                 Console.WriteLine(" 5.  Consultar artículo");
+                Console.WriteLine(" 6.  Descargar imagen de artículo");
                 Console.WriteLine(" 0.  Salir");
 
                 if (!string.IsNullOrEmpty(_usuarioActual))
@@ -50,6 +50,7 @@ namespace Cliente
                 else if (op == "3" && !string.IsNullOrEmpty(_usuarioActual)) EditarArticulo();
                 else if (op == "4" && !string.IsNullOrEmpty(_usuarioActual)) RealizarOferta();
                 else if (op == "5" && !string.IsNullOrEmpty(_usuarioActual)) ConsultarArticulo();
+                else if (op == "6") DescargarImagenArticulo();
                 else if (op == "0")
                 {
                     Console.WriteLine("Conexión terminada.");
@@ -288,6 +289,30 @@ namespace Cliente
             }
 
         }
+
+        private void DescargarImagenArticulo()
+        {
+            _cliente.EnviarComando(CommandConstants.ListarArticulosConImagen, "");
+            int cmd;
+            string respuesta = _cliente.RecibirRespuesta(out cmd);
+
+            if (respuesta == "SIN_IMAGENES")
+            {
+                Console.WriteLine("No hay artículos con imágenes disponibles.");
+                return;
+            }
+
+            Console.WriteLine("Artículos con imagen:");
+            Console.WriteLine(respuesta);
+
+            Console.Write("Selecciona el número de la imagen que deseas descargar: ");
+            string seleccion = Console.ReadLine();
+
+            _cliente.EnviarComando(CommandConstants.SolicitarImagenArticulo, seleccion);
+
+            _cliente.RecibirArchivoPorPartes();
+        }
+
 
     }
 }

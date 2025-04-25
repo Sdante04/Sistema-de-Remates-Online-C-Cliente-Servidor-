@@ -1,13 +1,14 @@
-﻿namespace Cliente;
-
-public class Program
+﻿namespace Cliente
 {
-    public static void Main()
+    public class Program
     {
-        var cliente = new Cliente();
-        cliente.Conectar();
-        cliente.IniciarMonitoreoCierre();
-        var menu = new MenuCliente(cliente);
-        menu.Mostrar();
+        public static void Main()
+        {
+            var cliente = new Cliente();
+            cliente.Conectar();
+            cliente.IniciarMonitoreoCierre();
+            var menu = new MenuCliente(cliente);
+            menu.Mostrar();
+        }
     }
 }

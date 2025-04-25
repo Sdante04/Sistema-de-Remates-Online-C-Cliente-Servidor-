@@ -1,10 +1,7 @@
 ﻿using Common.Config;
 using Common;
-using System;
-using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using Common.Common;
 
 namespace Cliente
 {
@@ -106,13 +103,79 @@ namespace Cliente
                 int bytesToSend = (int)Math.Min(ProtocoloImagen.MaxFileSizePart, fileLength - offset);
                 byte[] buffer = fsHelper.Read(path, offset, bytesToSend);
                 EnviarComando(CommandConstants.EnviarImagenParte, buffer);
-                Console.WriteLine($"Enviando parte {currentPart}/{totalParts} de {filename}...");
+                Console.WriteLine($"Enviando parte {currentPart}/{totalParts} de {filename} ({bytesToSend} bytes)...");
                 offset += bytesToSend;
                 currentPart++;
             }
 
             Console.WriteLine("Archivo enviado correctamente por partes.");
         }
+
+
+        public void RecibirArchivoPorPartes()
+        {
+            var helper = _helper;
+            FileStreamHelper fsHelper = new();
+
+            // Primero recibimos encabezado
+            byte[] headerPrefix = helper.Receive(ProtocolConstants.HEADER_SIZE);
+            string tipoHeader = Encoding.UTF8.GetString(headerPrefix);
+
+            if (tipoHeader != ProtocolConstants.Response)
+            {
+                Console.WriteLine("Error: Protocolo de respuesta inválido para recibir imagen.");
+                return;
+            }
+
+            int cmd = int.Parse(Encoding.UTF8.GetString(helper.Receive(ProtocolConstants.CMD_SIZE)));
+            int len = BitConverter.ToInt32(helper.Receive(ProtocolConstants.LENGTH_SIZE));
+            byte[] headerData = helper.Receive(len);
+
+            if (cmd != CommandConstants.EnviarImagenHeader)
+            {
+                Console.WriteLine("Error: No se recibió encabezado correcto de imagen.");
+                return;
+            }
+
+            int nameLen = BitConverter.ToInt32(headerData, 0);
+            string filename = Encoding.UTF8.GetString(headerData, 4, nameLen);
+            long fileSize = BitConverter.ToInt64(headerData, 4 + nameLen);
+
+            Console.WriteLine($"Recibiendo archivo: {filename} ({fileSize} bytes)");
+
+            long offset = 0;
+            long currentPart = 1;
+
+            while (offset < fileSize)
+            {
+                // Recibir el siguiente paquete que debería ser una parte de la imagen
+                byte[] partHeader = helper.Receive(ProtocolConstants.HEADER_SIZE);
+                string tipoParte = Encoding.UTF8.GetString(partHeader);
+                if (tipoParte != ProtocolConstants.Response)
+                {
+                    Console.WriteLine("Error: Protocolo inválido en parte de imagen.");
+                    return;
+                }
+
+                int cmdParte = int.Parse(Encoding.UTF8.GetString(helper.Receive(ProtocolConstants.CMD_SIZE)));
+                int lenParte = BitConverter.ToInt32(helper.Receive(ProtocolConstants.LENGTH_SIZE));
+                byte[] dataParte = helper.Receive(lenParte);
+
+                if (cmdParte != CommandConstants.EnviarImagenParte)
+                {
+                    Console.WriteLine("Error: Esperaba parte de imagen, recibió otro comando.");
+                    return;
+                }
+
+                fsHelper.Write(filename, dataParte);
+                Console.WriteLine($"Parte {currentPart++} recibida ({lenParte} bytes)...");
+                offset += lenParte;
+            }
+
+            Console.WriteLine($"Archivo '{filename}' recibido correctamente.");
+        }
+
+
 
 
     }

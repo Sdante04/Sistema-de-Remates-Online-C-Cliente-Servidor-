@@ -2,8 +2,6 @@
 using System.Net.Sockets;
 using Servidor.Utils;
 using Common.Config;
-using Common;
-using System.Text;
 using Servidor.Servicios;
 
 namespace Servidor;
@@ -87,31 +85,5 @@ public class Server
         }
     }
 
-
-    public void RecibirArchivoPorPartes(NetworkHelper helper)
-    {
-        FileStreamHelper fsHelper = new();
-
-        int nameLen = BitConverter.ToInt32(helper.Receive(ProtocoloImagen.LargoFijo), 0);
-        string filename = Encoding.UTF8.GetString(helper.Receive(nameLen));
-
-        long fileSize = BitConverter.ToInt64(helper.Receive(ProtocoloImagen.LargoFijoArchivo), 0);
-        long totalParts = ProtocoloImagen.CalcularCantidadDePartes(fileSize);
-
-        long offset = 0;
-        long currentPart = 1;
-
-        while (offset < fileSize)
-        {
-            int bytesToReceive = (int)Math.Min(ProtocoloImagen.MaxFileSizePart, fileSize - offset);
-            Console.WriteLine($"Recibiendo parte {currentPart}/{totalParts}...");
-            byte[] buffer = helper.Receive(bytesToReceive);
-            fsHelper.Write(filename, buffer);
-            offset += bytesToReceive;
-            currentPart++;
-        }
-
-        Logger.Log($"Archivo '{filename}' recibido correctamente.");
-    }
 
 }

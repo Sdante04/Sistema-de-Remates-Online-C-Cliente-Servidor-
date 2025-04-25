@@ -1,28 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Common
+﻿namespace Common
 {
-    namespace Common
+    public class CommandConstants
     {
-        public class CommandConstants
-        {
-            public const int PublicarArticulo = 1;
-            public const int Login = 2;
-            public const int EnviarImagenHeader = 3;
-            public const int EnviarImagenParte = 4;
-            public const int ValidarArticulo = 5;
-            public const int ObtenerArticulosUsuario = 6;
-            public const int EditarArticulo = 7;
-            public const int RealizarOferta = 8;
-            public const int ListarArticulosRemate = 9;
-            public const int ConsultarArticulo = 10;
-            public const int ListarTodosLosArticulos = 11;
-
-        }
+        public const int PublicarArticulo = 1;
+        public const int Login = 2;
+        public const int EnviarImagenHeader = 3;
+        public const int EnviarImagenParte = 4;
+        public const int ValidarArticulo = 5;
+        public const int ObtenerArticulosUsuario = 6;
+        public const int EditarArticulo = 7;
+        public const int RealizarOferta = 8;
+        public const int ListarArticulosRemate = 9;
+        public const int ConsultarArticulo = 10;
+        public const int ListarTodosLosArticulos = 11;
+        public const int ListarArticulosConImagen = 12;
+        public const int SolicitarImagenArticulo = 13;
     }
-
 }

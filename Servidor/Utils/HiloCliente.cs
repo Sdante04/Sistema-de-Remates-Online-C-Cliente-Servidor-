@@ -1,10 +1,7 @@
 ﻿using Servidor.Servicios;
-using Servidor.Utils;
 using System.Net.Sockets;
 using System.Text;
-using Servidor.Servicios;
 using Common;
-using Common.Common;
 
 namespace Servidor.Utils
 {
@@ -163,6 +160,34 @@ namespace Servidor.Utils
                                 resp = _articuloServicio.ObtenerTodosLosArticulos();
                                 break;
                             }
+                        case CommandConstants.ListarArticulosConImagen:
+                            {
+                                var lista = _articuloServicio.ListarArticulosConImagen();
+                                resp = lista;
+                                break;
+                            }
+
+                        case CommandConstants.SolicitarImagenArticulo:
+                            {
+                                if (int.TryParse(data, out int indice))
+                                {
+                                    var path = _articuloServicio.ObtenerNombreArchivoImagen(indice - 1);
+                                    if (path != null)
+                                    {
+                                        EnviarArchivoAlCliente(helper, path);
+                                    }
+                                    else
+                                    {
+                                        resp = "IMAGEN_NO_ENCONTRADA";
+                                    }
+                                }
+                                else
+                                {
+                                    resp = "Índice inválido.";
+                                }
+                                break;
+                            }
+
                         default:
                             resp = "CMD_DESCONOCIDO";
                             break;
@@ -184,6 +209,50 @@ namespace Servidor.Utils
                 _socket.Close();
                 Logger.Log($"Cliente {_id} desconectado.");
             }
+        }
+
+        private void EnviarArchivoAlCliente(NetworkHelper helper, string path)
+        {
+            FileStreamHelper fsHelper = new();
+            FileInfo info = new(path);
+            string filename = info.Name;
+            long fileLength = info.Length;
+            long totalParts = ProtocoloImagen.CalcularCantidadDePartes(fileLength);
+
+            // Armar encabezado de imagen
+            byte[] filenameBytes = Encoding.UTF8.GetBytes(filename);
+            byte[] filenameLengthBytes = BitConverter.GetBytes(filenameBytes.Length);
+            byte[] fileLengthBytes = BitConverter.GetBytes(fileLength);
+            byte[] headerData = filenameLengthBytes.Concat(filenameBytes).Concat(fileLengthBytes).ToArray();
+
+            // Enviar encabezado como un comando completo
+            EnviarComandoDesdeServidor(helper, CommandConstants.EnviarImagenHeader, headerData);
+
+            // Enviar partes individuales
+            long offset = 0;
+            long currentPart = 1;
+            while (offset < fileLength)
+            {
+                int bytesToSend = (int)Math.Min(ProtocoloImagen.MaxFileSizePart, fileLength - offset);
+                byte[] buffer = fsHelper.Read(path, offset, bytesToSend);
+
+                // Enviar cada parte como comando
+                EnviarComandoDesdeServidor(helper, CommandConstants.EnviarImagenParte, buffer);
+
+                offset += bytesToSend;
+                currentPart++;
+            }
+
+            Logger.Log($"Imagen '{filename}' enviada correctamente al cliente.");
+        }
+
+
+        private void EnviarComandoDesdeServidor(NetworkHelper helper, int cmd, byte[] data)
+        {
+            helper.Send(Encoding.UTF8.GetBytes(ProtocolConstants.Response)); // "RES"
+            helper.Send(Encoding.UTF8.GetBytes(cmd.ToString("D2")));           // comando
+            helper.Send(BitConverter.GetBytes(data.Length));                  // largo
+            helper.Send(data);                                                 // datos
         }
 
         public void Cerrar()
