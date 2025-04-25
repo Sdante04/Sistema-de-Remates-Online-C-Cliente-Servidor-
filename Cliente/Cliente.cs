@@ -87,7 +87,7 @@ namespace Cliente
             FileInfo info = new(path);
             string filename = info.Name;
             long fileLength = info.Length;
-            long totalParts = Protocolo.CalcularCantidadDePartes(fileLength);
+            long totalParts = ProtocoloImagen.CalcularCantidadDePartes(fileLength);
 
             FileStreamHelper fsHelper = new();
             long offset = 0;
@@ -103,7 +103,7 @@ namespace Cliente
             // CMD 4: Enviar partes individuales
             while (offset < fileLength)
             {
-                int bytesToSend = (int)Math.Min(Protocolo.MaxFileSizePart, fileLength - offset);
+                int bytesToSend = (int)Math.Min(ProtocoloImagen.MaxFileSizePart, fileLength - offset);
                 byte[] buffer = fsHelper.Read(path, offset, bytesToSend);
                 EnviarComando(CommandConstants.EnviarImagenParte, buffer);
                 Console.WriteLine($"Enviando parte {currentPart}/{totalParts} de {filename}...");

@@ -1,6 +1,6 @@
 ﻿namespace Common
 {
-    public static class Protocolo
+    public static class ProtocoloImagen
     {
         public const int LargoFijo = 4;
         public const int LargoFijoArchivo = 8;
