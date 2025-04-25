@@ -141,6 +141,9 @@ namespace Cliente
             string filename = Encoding.UTF8.GetString(headerData, 4, nameLen);
             long fileSize = BitConverter.ToInt64(headerData, 4 + nameLen);
 
+            if (File.Exists(filename))
+                File.Delete(filename);
+
             Console.WriteLine($"Recibiendo archivo: {filename} ({fileSize} bytes)");
 
             long offset = 0;

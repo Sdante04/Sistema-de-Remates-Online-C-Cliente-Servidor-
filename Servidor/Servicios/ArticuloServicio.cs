@@ -299,6 +299,40 @@ namespace Servidor.Servicios
             return sb.ToString();
         }
 
+        public string EliminarArticulo(string datos, string usuario, out bool eliminado)
+        {
+            eliminado = false;
+
+            if (!int.TryParse(datos, out int indice))
+                return "Índice inválido.";
+
+            var articulosUsuario = _articulos.Where(a => a.Usuario == usuario).ToList();
+            if (indice < 1 || indice > articulosUsuario.Count)
+                return "Índice fuera de rango.";
+
+            var articulo = articulosUsuario[indice - 1];
+
+            if (articulo.Ofertas.Any())
+                return "No se puede eliminar un artículo con ofertas registradas.";
+
+            if (articulo.FechaCierre <= DateTime.Now)
+                return "No se puede eliminar un remate finalizado.";
+
+            _articulos.Remove(articulo);
+            eliminado = true;
+
+            if (!string.IsNullOrEmpty(articulo.ImagenNombreArchivo))
+            {
+                try
+                {
+                    File.Delete(articulo.ImagenNombreArchivo);
+                }
+                catch { }
+            }
+
+            return $"Artículo '{articulo.Titulo}' eliminado correctamente.";
+        }
+
         public string ListarArticulosConImagen()
         {
             var conImagen = _articulos.Where(a => !string.IsNullOrEmpty(a.ImagenNombreArchivo)).ToList();

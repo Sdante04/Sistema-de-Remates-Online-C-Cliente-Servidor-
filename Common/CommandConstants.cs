@@ -15,5 +15,7 @@
         public const int ListarTodosLosArticulos = 11;
         public const int ListarArticulosConImagen = 12;
         public const int SolicitarImagenArticulo = 13;
+        public const int EliminarArticulo = 14;
+
     }
 }

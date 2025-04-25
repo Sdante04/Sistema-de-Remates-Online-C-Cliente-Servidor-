@@ -28,6 +28,7 @@ namespace Cliente
                 Console.WriteLine(" 4.  Realizar oferta");
                 Console.WriteLine(" 5.  Consultar artículo");
                 Console.WriteLine(" 6.  Descargar imagen de artículo");
+                Console.WriteLine(" 7.  Eliminar artículo");
                 Console.WriteLine(" 0.  Salir");
 
                 if (!string.IsNullOrEmpty(_usuarioActual))
@@ -51,6 +52,7 @@ namespace Cliente
                 else if (op == "4" && !string.IsNullOrEmpty(_usuarioActual)) RealizarOferta();
                 else if (op == "5" && !string.IsNullOrEmpty(_usuarioActual)) ConsultarArticulo();
                 else if (op == "6") DescargarImagenArticulo();
+                else if (op == "7" && !string.IsNullOrEmpty(_usuarioActual)) EliminarArticulo();
                 else if (op == "0")
                 {
                     Console.WriteLine("Conexión terminada.");
@@ -313,6 +315,28 @@ namespace Cliente
             _cliente.RecibirArchivoPorPartes();
         }
 
+        private void EliminarArticulo()
+        {
+            _cliente.EnviarComando(CommandConstants.ObtenerArticulosUsuario, "");
+            int cmd;
+            string respuesta = _cliente.RecibirRespuesta(out cmd);
+
+            if (respuesta == "SIN_ARTICULOS")
+            {
+                Console.WriteLine("No tienes artículos para eliminar.");
+                return;
+            }
+
+            Console.WriteLine("Tus artículos:");
+            Console.WriteLine(respuesta);
+
+            Console.Write("Selecciona el número del artículo a eliminar: ");
+            string seleccion = Console.ReadLine();
+
+            _cliente.EnviarComando(CommandConstants.EliminarArticulo, seleccion);
+            string resultado = _cliente.RecibirRespuesta(out cmd);
+            Console.WriteLine(resultado);
+        }
 
     }
 }

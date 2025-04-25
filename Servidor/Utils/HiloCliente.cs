@@ -78,13 +78,16 @@ namespace Servidor.Utils
                                 string filename = Encoding.UTF8.GetString(rawData, 4, nameLen);
                                 long fileSize = BitConverter.ToInt64(rawData, 4 + nameLen);
 
+                                if (File.Exists(filename))
+                                    File.Delete(filename);
+
                                 _archivoActualNombre = filename;
                                 _archivoActualTamanio = fileSize;
                                 _archivoActualOffset = 0;
-
                                 Logger.Log($"[Cliente {_id}] Recibiendo archivo '{filename}' ({fileSize} bytes)");
                                 break;
                             }
+
 
                         case CommandConstants.EnviarImagenParte:
                             {
@@ -185,6 +188,18 @@ namespace Servidor.Utils
                                 {
                                     resp = "Índice inválido.";
                                 }
+                                break;
+                            }
+                        case CommandConstants.EliminarArticulo:
+                            {
+                                string user = $"cliente_{_id}";
+                                bool ok;
+                                string mensaje = _articuloServicio.EliminarArticulo(data, user, out ok);
+                                resp = mensaje;
+                                if (ok)
+                                    Logger.Log($"[Cliente {_id}] Usuario '{user}' eliminó un artículo.");
+                                else
+                                    Logger.Warn($"[Cliente {_id}] Fallo al eliminar artículo: {mensaje}");
                                 break;
                             }
 
