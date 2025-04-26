@@ -4,86 +4,95 @@ using Servidor.Utils;
 using Common.Config;
 using Servidor.Servicios;
 
-namespace Servidor;
-
-public class Server
+namespace Servidor
 {
-    private static int contadorClientes = 0;
-    private static List<HiloCliente> _clientesActivos = new();
-    private static bool _ejecutando = true;
-    private static Socket? _socketServidor;
-    private static ArticuloServicio _articuloServicioCompartido = new();
-
-    public static void Main()
+    public class Server
     {
-        Logger.Log("Levantando servidor...");
+        private static int contadorClientes = 0;
+        private static readonly List<HiloCliente> _clientesActivos = new();
+        private static readonly object _lockClientes = new object();
 
-        _socketServidor = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        _socketServidor.Bind(new IPEndPoint(IPAddress.Parse(ServerConfig.IP), ServerConfig.Puerto));
-        _socketServidor.Listen();
+        private static bool _ejecutando = true;
+        private static Socket? _socketServidor;
+        private static readonly ArticuloServicio _articuloServicioCompartido = new();
 
-        Logger.Log($"Servidor escuchando en puerto {ServerConfig.Puerto}");
-        Logger.Log($"Escriba 'exit' o 'cerrar' para cerrar el servidor");
-
-        Thread hiloComandos = new Thread(EscucharComandoCierre);
-        hiloComandos.Start();
-
-        while (_ejecutando)
+        public static void Main()
         {
-            try
+            Logger.Log("Levantando servidor...");
+
+            _socketServidor = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            _socketServidor.Bind(new IPEndPoint(IPAddress.Parse(ServerConfig.IP), ServerConfig.Puerto));
+            _socketServidor.Listen();
+
+            Logger.Log($"Servidor escuchando en puerto {ServerConfig.Puerto}");
+            Logger.Log("Escriba 'exit' o 'cerrar' para cerrar el servidor");
+
+            Thread hiloComandos = new Thread(EscucharComandoCierre);
+            hiloComandos.Start();
+
+            while (_ejecutando)
             {
-                Socket socketCliente = _socketServidor.Accept();
-
-                int idCliente = Interlocked.Increment(ref contadorClientes);
-                Logger.Log($"Nuevo cliente conectado (ID: {idCliente})");
-
-                var hiloCliente = new HiloCliente(socketCliente, idCliente, _articuloServicioCompartido);
-                _clientesActivos.Add(hiloCliente);
-
-                Thread hilo = new Thread(hiloCliente.Atender);
-                hilo.Start();
-            }
-            catch (SocketException ex)
-            {
-                if (!_ejecutando)
-                    Logger.Log("Socket cerrado intencionalmente. Deteniendo servidor...");
-                else
-                    Logger.Error("Error inesperado al aceptar cliente: " + ex.Message);
-            }
-        }
-
-        Logger.Log("Cerrando conexiones activas...");
-        foreach (var cliente in _clientesActivos)
-        {
-            cliente.Cerrar();
-        }
-
-        Logger.Log("Servidor finalizado correctamente.");
-    }
-
-    private static void EscucharComandoCierre()
-    {
-        while (true)
-        {
-            string? comando = Console.ReadLine();
-            if (comando?.ToLower() is "exit" or "cerrar")
-            {
-                Logger.Log("Se recibió comando de cierre. Apagando servidor...");
-                _ejecutando = false;
-
                 try
                 {
-                    _socketServidor?.Close();
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error("Error al cerrar el socket del servidor: " + ex.Message);
-                }
+                    Socket socketCliente = _socketServidor.Accept();
 
-                break;
+                    int idCliente = Interlocked.Increment(ref contadorClientes);
+                    Logger.Log($"Nuevo cliente conectado (ID: {idCliente})");
+
+                    var hiloCliente = new HiloCliente(socketCliente, idCliente, _articuloServicioCompartido);
+
+                    lock (_lockClientes)
+                    {
+                        _clientesActivos.Add(hiloCliente);
+                    }
+
+                    Thread hilo = new Thread(hiloCliente.Atender);
+                    hilo.Start();
+                }
+                catch (SocketException ex)
+                {
+                    if (!_ejecutando)
+                        Logger.Log("Socket cerrado intencionalmente. Deteniendo servidor...");
+                    else
+                        Logger.Error("Error inesperado al aceptar cliente: " + ex.Message);
+                }
+            }
+
+            Logger.Log("Cerrando conexiones activas...");
+
+            lock (_lockClientes)
+            {
+                foreach (var cliente in _clientesActivos)
+                {
+                    cliente.Cerrar();
+                }
+            }
+
+            Logger.Log("Servidor finalizado correctamente");
+        }
+
+        private static void EscucharComandoCierre()
+        {
+            while (true)
+            {
+                string? comando = Console.ReadLine();
+                if (comando?.ToLower() is "exit" or "cerrar")
+                {
+                    Logger.Log("Se recibió comando de cierre. Apagando servidor...");
+                    _ejecutando = false;
+
+                    try
+                    {
+                        _socketServidor?.Close();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error("Error al cerrar el socket del servidor: " + ex.Message);
+                    }
+
+                    break;
+                }
             }
         }
     }
-
-
 }

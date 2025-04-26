@@ -234,16 +234,13 @@ namespace Servidor.Utils
             long fileLength = info.Length;
             long totalParts = ProtocoloImagen.CalcularCantidadDePartes(fileLength);
 
-            // Armar encabezado de imagen
             byte[] filenameBytes = Encoding.UTF8.GetBytes(filename);
             byte[] filenameLengthBytes = BitConverter.GetBytes(filenameBytes.Length);
             byte[] fileLengthBytes = BitConverter.GetBytes(fileLength);
             byte[] headerData = filenameLengthBytes.Concat(filenameBytes).Concat(fileLengthBytes).ToArray();
 
-            // Enviar encabezado como un comando completo
             EnviarComandoDesdeServidor(helper, CommandConstants.EnviarImagenHeader, headerData);
 
-            // Enviar partes individuales
             long offset = 0;
             long currentPart = 1;
             while (offset < fileLength)
@@ -251,7 +248,6 @@ namespace Servidor.Utils
                 int bytesToSend = (int)Math.Min(ProtocoloImagen.MaxFileSizePart, fileLength - offset);
                 byte[] buffer = fsHelper.Read(path, offset, bytesToSend);
 
-                // Enviar cada parte como comando
                 EnviarComandoDesdeServidor(helper, CommandConstants.EnviarImagenParte, buffer);
 
                 offset += bytesToSend;
