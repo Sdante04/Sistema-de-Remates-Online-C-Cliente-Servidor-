@@ -590,12 +590,6 @@ namespace Cliente
 
         private void DescargarImagenArticulo()
         {
-            if (string.IsNullOrEmpty(_usuarioActual))
-            {
-                Console.WriteLine("Debes iniciar sesión para descargar imágenes.");
-                return;
-            }
-
             _cliente.EnviarComando(CommandConstants.ListarArticulosConImagen, "");
             int cmd;
             string respuesta = _cliente.RecibirRespuesta(out cmd);
@@ -609,25 +603,14 @@ namespace Cliente
             Console.WriteLine("Artículos con imagen:");
             Console.WriteLine(respuesta);
 
-            Console.Write("Selecciona el ID de la imagen que deseas descargar: ");
+            Console.Write("Selecciona el número de la imagen que deseas descargar: ");
             string seleccion = Console.ReadLine();
-            if (!int.TryParse(seleccion, out _))
-            {
-                Console.WriteLine("ID inválido.");
-                return;
-            }
 
             _cliente.EnviarComando(CommandConstants.SolicitarImagenArticulo, seleccion);
-            string respuestaInicial = _cliente.RecibirRespuesta(out cmd);
-            if (respuestaInicial != "IMAGEN_NO_ENCONTRADA" && !respuestaInicial.Contains("ID inválido"))
-            {
-                _cliente.RecibirArchivoPorPartes();
-            }
-            else
-            {
-                Console.WriteLine(respuestaInicial);
-            }
+
+            _cliente.RecibirArchivoPorPartes();
         }
+
 
         private void EliminarArticulo()
         {

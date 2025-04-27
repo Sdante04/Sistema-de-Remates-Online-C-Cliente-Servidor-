@@ -309,13 +309,15 @@ namespace Servidor.Utils
             Logger.Log($"Imagen '{filename}' enviada correctamente al cliente.");
         }
 
-        private void EnviarComandoDesdeServidor(NetworkHelper helper, int cmd, byte[] data)
-        {
-            helper.Send(Encoding.UTF8.GetBytes(ProtocolConstants.Response));
-            helper.Send(Encoding.UTF8.GetBytes(cmd.ToString("D2")));
-            helper.Send(BitConverter.GetBytes(data.Length));
-            helper.Send(data);
-        }
+
+         private void EnviarComandoDesdeServidor(NetworkHelper helper, int cmd, byte[] data)
+         {
+             helper.Send(Encoding.UTF8.GetBytes(ProtocolConstants.Response));
+             helper.Send(Encoding.UTF8.GetBytes(cmd.ToString("D2")));
+             helper.Send(BitConverter.GetBytes(data.Length));
+             helper.Send(data);
+         }
+
 
         public void Cerrar()
         {
