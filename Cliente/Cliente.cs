@@ -7,6 +7,7 @@ namespace Cliente
 {
     public class Cliente
     {
+        private static readonly ConfigManager ConfigManager = new ConfigManager();
         private Socket _socket;
         private NetworkHelper _helper;
 
@@ -17,7 +18,9 @@ namespace Cliente
 
         public void Conectar()
         {
-            _socket.Connect(ClientConfig.IPServidor, ClientConfig.PuertoServidor);
+             string serverIp = ConfigManager.Readsettings(ClientConfiguration.serverIPconfigKey);
+              int serverPort = int.Parse(ConfigManager.Readsettings(ClientConfiguration.serverPortConfKey));
+            _socket.Connect(serverIp, serverPort);
             _helper = new NetworkHelper(_socket);
             Console.WriteLine("Conectado al servidor.");
         }
