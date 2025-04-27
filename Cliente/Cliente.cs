@@ -18,9 +18,9 @@ namespace Cliente
 
         public void Conectar()
         {
-            string serverIp = ConfigManager.Readsettings(ClientConfiguration.serverIPconfigKey);
-            int serverPort = int.Parse(ConfigManager.Readsettings(ClientConfiguration.serverPortConfKey));
-            _socket.Connect(ClientConfig.IPServidor, ClientConfig.PuertoServidor);
+             string serverIp = ConfigManager.Readsettings(ClientConfiguration.serverIPconfigKey);
+              int serverPort = int.Parse(ConfigManager.Readsettings(ClientConfiguration.serverPortConfKey));
+            _socket.Connect(serverIp, serverPort);
             _helper = new NetworkHelper(_socket);
             Console.WriteLine("Conectado al servidor.");
         }
