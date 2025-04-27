@@ -11,6 +11,7 @@ namespace Servidor
         private static int contadorClientes = 0;
         private static readonly List<HiloCliente> _clientesActivos = new();
         private static readonly object _lockClientes = new object();
+        private static readonly ConfigManager ConfigManager = new ConfigManager();
 
         private static bool _ejecutando = true;
         private static Socket? _socketServidor;
@@ -21,10 +22,13 @@ namespace Servidor
             Logger.Log("Levantando servidor...");
 
             _socketServidor = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            _socketServidor.Bind(new IPEndPoint(IPAddress.Parse(ServerConfig.IP), ServerConfig.Puerto));
+            string serverIp = ConfigManager.Readsettings(ServerConfiguration.serverIPconfigKey);
+            int serverPort = int.Parse(ConfigManager.Readsettings(ServerConfiguration.serverPortConfKey));
+            var localEndpoint = new IPEndPoint(IPAddress.Parse(serverIp), serverPort);
+            _socketServidor.Bind(localEndpoint);
             _socketServidor.Listen();
 
-            Logger.Log($"Servidor escuchando en puerto {ServerConfig.Puerto}");
+            Logger.Log($"Esperando por clientes en la IP: {localEndpoint.Address} y escuchando en puerto: {localEndpoint.Port}");
             Logger.Log("Escriba 'exit' o 'cerrar' para cerrar el servidor");
 
             Thread hiloComandos = new Thread(EscucharComandoCierre);
