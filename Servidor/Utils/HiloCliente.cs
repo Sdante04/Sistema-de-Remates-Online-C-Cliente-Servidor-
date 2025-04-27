@@ -1,7 +1,9 @@
-﻿using Servidor.Servicios;
+﻿using Servidor.Dominio;
+using Servidor.Servicios;
 using System.Net.Sockets;
 using System.Text;
 using Common;
+using Servidor.Utils;
 
 namespace Servidor.Utils
 {
@@ -15,10 +17,13 @@ namespace Servidor.Utils
         private string _archivoActualNombre = "";
         private long _archivoActualTamanio = 0;
         private long _archivoActualOffset = 0;
+        private string _usuarioActual = null;
 
         public HiloCliente(Socket socket, int id, ArticuloServicio articuloServicio)
         {
-            _socket = socket; _id = id; _us = new UsuarioServicio();
+            _socket = socket;
+            _id = id;
+            _us = new UsuarioServicio();
             _articuloServicio = articuloServicio;
         }
 
@@ -41,8 +46,10 @@ namespace Servidor.Utils
                         case CommandConstants.Login:
                             var parts = data.Split('|');
                             var usuario = parts[0];
-                            if (_us.Autenticar(parts[0], parts[1]) != null)
+                            var usuarioAutenticado = _us.Autenticar(parts[0], parts[1]);
+                            if (usuarioAutenticado != null)
                             {
+                                _usuarioActual = usuario;
                                 Logger.Log($"[Cliente {_id}] Usuario '{usuario}' inició sesión correctamente.");
                                 resp = "LOGIN_OK";
                             }
@@ -53,155 +60,196 @@ namespace Servidor.Utils
                             }
                             break;
 
-                        case CommandConstants.PublicarArticulo:
+                        case CommandConstants.RegistrarUsuario:
+                            var partesRegistro = data.Split('|');
+                            bool registrado = _us.RegistrarUsuario(partesRegistro[0], partesRegistro[1]);
+                            if (registrado)
                             {
-                                string user = $"cliente_{_id}";
-                                bool ok;
-                                string mensaje = _articuloServicio.PublicarArticulo(data, user, out ok);
-                                if (ok)
-                                {
-                                    var partes = data.Split('|');
-                                    string titulo = partes[0];
-                                    Logger.Log($"[Cliente {_id}] Usuario '{user}' publicó el artículo '{titulo}'.");
-                                }
-                                else
-                                {
-                                    Logger.Warn($"[Cliente {_id}] Fallo al publicar artículo. Datos: {data}");
-                                }
-                                resp = mensaje;
+                                Logger.Log($"[Cliente {_id}] Usuario '{partesRegistro[0]}' registrado correctamente.");
+                                resp = "REGISTRO_OK";
+                            }
+                            else
+                            {
+                                Logger.Warn($"[Cliente {_id}] Fallo al registrar usuario '{partesRegistro[0]}'. Ya existe o datos inválidos.");
+                                resp = "USUARIO_YA_EXISTE";
+                            }
+                            break;
+
+                        case CommandConstants.PublicarArticulo:
+                            if (_usuarioActual == null)
+                            {
+                                resp = "NO_AUTENTICADO";
                                 break;
                             }
+                            bool ok;
+                            string mensaje = _articuloServicio.PublicarArticulo(data, _usuarioActual, out ok);
+                            if (ok)
+                            {
+                                var partes = data.Split('|');
+                                string titulo = partes[0];
+                                Logger.Log($"[Cliente {_id}] Usuario '{_usuarioActual}' publicó el artículo '{titulo}'.");
+                            }
+                            else
+                            {
+                                Logger.Warn($"[Cliente {_id}] Fallo al publicar artículo. Datos: {data}");
+                            }
+                            resp = mensaje;
+                            break;
 
                         case CommandConstants.EnviarImagenHeader:
-                            {
-                                int nameLen = BitConverter.ToInt32(rawData, 0);
-                                string filename = Encoding.UTF8.GetString(rawData, 4, nameLen);
-                                long fileSize = BitConverter.ToInt64(rawData, 4 + nameLen);
+                            int nameLen = BitConverter.ToInt32(rawData, 0);
+                            string filename = Encoding.UTF8.GetString(rawData, 4, nameLen);
+                            long fileSize = BitConverter.ToInt64(rawData, 4 + nameLen);
 
-                                if (File.Exists(filename))
-                                    File.Delete(filename);
+                            if (File.Exists(filename))
+                                File.Delete(filename);
 
-                                _archivoActualNombre = filename;
-                                _archivoActualTamanio = fileSize;
-                                _archivoActualOffset = 0;
-                                Logger.Log($"[Cliente {_id}] Recibiendo archivo '{filename}' ({fileSize} bytes)");
-                                break;
-                            }
-
+                            _archivoActualNombre = filename;
+                            _archivoActualTamanio = fileSize;
+                            _archivoActualOffset = 0;
+                            Logger.Log($"[Cliente {_id}] Recibiendo archivo '{filename}' ({fileSize} bytes)");
+                            break;
 
                         case CommandConstants.EnviarImagenParte:
+                            if (string.IsNullOrEmpty(_archivoActualNombre))
                             {
-                                if (string.IsNullOrEmpty(_archivoActualNombre))
-                                {
-                                    Logger.Error("No se recibió el encabezado del archivo antes de recibir partes.");
-                                    break;
-                                }
-
-                                new FileStreamHelper().Write(_archivoActualNombre, rawData);
-                                _archivoActualOffset += rawData.Length;
-
-                                if (_archivoActualOffset >= _archivoActualTamanio)
-                                {
-                                    Logger.Log($"[Cliente {_id}] Imagen '{_archivoActualNombre}' recibida completamente.");
-                                    _archivoActualNombre = "";
-                                    _archivoActualTamanio = 0;
-                                    _archivoActualOffset = 0;
-                                }
-
+                                Logger.Error("No se recibió el encabezado del archivo antes de recibir partes.");
                                 break;
                             }
+
+                            new FileStreamHelper().Write(_archivoActualNombre, rawData);
+                            _archivoActualOffset += rawData.Length;
+
+                            if (_archivoActualOffset >= _archivoActualTamanio)
+                            {
+                                Logger.Log($"[Cliente {_id}] Imagen '{_archivoActualNombre}' recibida completamente.");
+                                _archivoActualNombre = "";
+                                _archivoActualTamanio = 0;
+                                _archivoActualOffset = 0;
+                            }
+                            break;
+
                         case CommandConstants.ValidarArticulo:
-                            {
-                                bool esValido = _articuloServicio.ValidarDatosArticulo(data);
-                                resp = esValido ? "VALIDO" : "INVALIDO";
-                                break;
-                            }
+                            bool esValido = _articuloServicio.ValidarDatosArticulo(data);
+                            resp = esValido ? "VALIDO" : "INVALIDO";
+                            break;
 
                         case CommandConstants.ObtenerArticulosUsuario:
+                            if (_usuarioActual == null)
                             {
-                                string user = $"cliente_{_id}";
-                                resp = _articuloServicio.ObtenerArticulosDeUsuario(user);
+                                resp = "NO_AUTENTICADO";
                                 break;
                             }
+                            resp = _articuloServicio.ObtenerArticulosDeUsuario(_usuarioActual);
+                            break;
 
                         case CommandConstants.EditarArticulo:
+                            if (_usuarioActual == null)
                             {
-                                string user = $"cliente_{_id}";
-                                bool ok;
-                                string mensaje = _articuloServicio.EditarArticulo(data, user, out ok);
-                                resp = mensaje;
-                                if (ok)
-                                    Logger.Log($"[Cliente {_id}] Usuario '{user}' editó un artículo.");
-                                else
-                                    Logger.Warn($"[Cliente {_id}] Fallo al editar artículo: {mensaje}");
+                                resp = "NO_AUTENTICADO";
                                 break;
                             }
+                            bool okEditar;
+                            string mensajeEditar = _articuloServicio.EditarArticulo(data, _usuarioActual, out okEditar);
+                            resp = mensajeEditar;
+                            if (okEditar)
+                                Logger.Log($"[Cliente {_id}] Usuario '{_usuarioActual}' editó un artículo.");
+                            else
+                                Logger.Warn($"[Cliente {_id}] Fallo al editar artículo: {mensajeEditar}");
+                            break;
+
                         case CommandConstants.RealizarOferta:
+                            if (_usuarioActual == null)
                             {
-                                string user = $"cliente_{_id}";
-                                string respuesta = _articuloServicio.RealizarOferta(data, user);
-                                resp = respuesta;
-                                if (resp.Contains("Oferta registrada:"))
-                                    Logger.Log($"[Cliente {_id}] {respuesta}");
-                                else
-                                    Logger.Warn($"[Cliente {_id}] {respuesta}");
+                                resp = "NO_AUTENTICADO";
                                 break;
                             }
+                            string respuesta = _articuloServicio.RealizarOferta(data, _usuarioActual);
+                            resp = respuesta;
+                            if (resp.Contains("Oferta registrada:"))
+                                Logger.Log($"[Cliente {_id}] {respuesta}");
+                            else
+                                Logger.Warn($"[Cliente {_id}] {respuesta}");
+                            break;
+
                         case CommandConstants.ListarArticulosRemate:
-                            {
-                                resp = _articuloServicio.ObtenerTodosLosArticulosEnRemate();
-                                break;
-                            }
+                            resp = _articuloServicio.ObtenerTodosLosArticulosEnRemate();
+                            break;
+
                         case CommandConstants.ConsultarArticulo:
-                            {
-                                string respuesta = _articuloServicio.ConsultarArticulo(data);
-                                resp = respuesta;
-                                break;
-                            }
+                            string respuestaConsultar = _articuloServicio.ConsultarArticulo(data);
+                            resp = respuestaConsultar;
+                            break;
+
                         case CommandConstants.ListarTodosLosArticulos:
-                            {
-                                resp = _articuloServicio.ObtenerTodosLosArticulos();
-                                break;
-                            }
+                            resp = _articuloServicio.ObtenerTodosLosArticulos();
+                            break;
+
                         case CommandConstants.ListarArticulosConImagen:
-                            {
-                                var lista = _articuloServicio.ListarArticulosConImagen();
-                                resp = lista;
-                                break;
-                            }
+                            var lista = _articuloServicio.ListarArticulosConImagen();
+                            resp = lista;
+                            break;
 
                         case CommandConstants.SolicitarImagenArticulo:
+                            if (_usuarioActual == null)
                             {
-                                if (int.TryParse(data, out int indice))
+                                resp = "NO_AUTENTICADO";
+                                break;
+                            }
+                            if (int.TryParse(data, out int id))
+                            {
+                                var path = _articuloServicio.ObtenerNombreArchivoImagen(id);
+                                if (path != null)
                                 {
-                                    var path = _articuloServicio.ObtenerNombreArchivoImagen(indice - 1);
-                                    if (path != null)
-                                    {
-                                        EnviarArchivoAlCliente(helper, path);
-                                    }
-                                    else
-                                    {
-                                        resp = "IMAGEN_NO_ENCONTRADA";
-                                    }
+                                    EnviarArchivoAlCliente(helper, path);
                                 }
                                 else
                                 {
-                                    resp = "Índice inválido.";
+                                    resp = "IMAGEN_NO_ENCONTRADA";
                                 }
-                                break;
                             }
+                            else
+                            {
+                                resp = "ID inválido.";
+                            }
+                            break;
+
                         case CommandConstants.EliminarArticulo:
+                            if (_usuarioActual == null)
                             {
-                                string user = $"cliente_{_id}";
-                                bool ok;
-                                string mensaje = _articuloServicio.EliminarArticulo(data, user, out ok);
-                                resp = mensaje;
-                                if (ok)
-                                    Logger.Log($"[Cliente {_id}] Usuario '{user}' eliminó un artículo.");
-                                else
-                                    Logger.Warn($"[Cliente {_id}] Fallo al eliminar artículo: {mensaje}");
+                                resp = "NO_AUTENTICADO";
                                 break;
                             }
+                            bool okEliminar;
+                            string mensajeEliminar = _articuloServicio.EliminarArticulo(data, _usuarioActual, out okEliminar);
+                            resp = mensajeEliminar;
+                            if (okEliminar)
+                                Logger.Log($"[Cliente {_id}] Usuario '{_usuarioActual}' eliminó un artículo.");
+                            else
+                                Logger.Warn($"[Cliente {_id}] Fallo al eliminar artículo: {mensajeEliminar}");
+                            break;
+
+                        case CommandConstants.FiltrarArticulosPorCategoria:
+                            resp = _articuloServicio.FiltrarArticulosPorCategoria(data);
+                            break;
+
+                        case CommandConstants.ObtenerOfertasUsuario:
+                            if (_usuarioActual == null)
+                            {
+                                resp = "NO_AUTENTICADO";
+                                break;
+                            }
+                            resp = _articuloServicio.ObtenerOfertasDeUsuario(_usuarioActual);
+                            break;
+
+                        case CommandConstants.ObtenerRematesGanados:
+                            if (_usuarioActual == null)
+                            {
+                                resp = "NO_AUTENTICADO";
+                                break;
+                            }
+                            resp = _articuloServicio.ObtenerRematesGanadosPorUsuario(_usuarioActual);
+                            break;
 
                         default:
                             resp = "CMD_DESCONOCIDO";
@@ -218,7 +266,11 @@ namespace Servidor.Utils
                     }
                 }
             }
-            catch { /* cierre intencional o error */ }
+            catch (Exception ex)
+            {
+                Logger.Error($"[Cliente {_id}] Error: {ex.Message}");
+                _activo = false;
+            }
             finally
             {
                 _socket.Close();
@@ -258,13 +310,14 @@ namespace Servidor.Utils
         }
 
 
-        private void EnviarComandoDesdeServidor(NetworkHelper helper, int cmd, byte[] data)
-        {
-            helper.Send(Encoding.UTF8.GetBytes(ProtocolConstants.Response)); // "RES"
-            helper.Send(Encoding.UTF8.GetBytes(cmd.ToString("D2")));           // comando
-            helper.Send(BitConverter.GetBytes(data.Length));                  // largo
-            helper.Send(data);                                                 // datos
-        }
+         private void EnviarComandoDesdeServidor(NetworkHelper helper, int cmd, byte[] data)
+         {
+             helper.Send(Encoding.UTF8.GetBytes(ProtocolConstants.Response));
+             helper.Send(Encoding.UTF8.GetBytes(cmd.ToString("D2")));
+             helper.Send(BitConverter.GetBytes(data.Length));
+             helper.Send(data);
+         }
+
 
         public void Cerrar()
         {
@@ -273,5 +326,4 @@ namespace Servidor.Utils
             _socket.Close();
         }
     }
-
 }
