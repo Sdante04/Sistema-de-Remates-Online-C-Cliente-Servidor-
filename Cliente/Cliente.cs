@@ -32,7 +32,7 @@ namespace Cliente
                     {
                         if (_socket.Poll(0, SelectMode.SelectRead) && _socket.Available == 0)
                         {
-                            Console.WriteLine("\n Conexión del servidor finalizada");
+                            Console.WriteLine("\nConexión del servidor finalizada");
                             Environment.Exit(0);
                         }
                     }
@@ -69,14 +69,27 @@ namespace Cliente
             _helper.Send(dataBytes);
         }
 
-
         public string RecibirRespuesta(out int comando)
         {
-            byte[] header = _helper.Receive(ProtocolConstants.HEADER_SIZE);
-            comando = int.Parse(Encoding.UTF8.GetString(_helper.Receive(ProtocolConstants.CMD_SIZE)));
-            int len = BitConverter.ToInt32(_helper.Receive(ProtocolConstants.LENGTH_SIZE));
-            string datos = Encoding.UTF8.GetString(_helper.Receive(len));
-            return datos;
+            try
+            {
+                byte[] header = _helper.Receive(ProtocolConstants.HEADER_SIZE);
+                if (Encoding.UTF8.GetString(header) != ProtocolConstants.Response)
+                {
+                    comando = -1;
+                    return "Error: Respuesta inválida del servidor.";
+                }
+
+                comando = int.Parse(Encoding.UTF8.GetString(_helper.Receive(ProtocolConstants.CMD_SIZE)));
+                int len = BitConverter.ToInt32(_helper.Receive(ProtocolConstants.LENGTH_SIZE));
+                string datos = Encoding.UTF8.GetString(_helper.Receive(len));
+                return datos;
+            }
+            catch (Exception ex)
+            {
+                comando = -1;
+                return $"Error al recibir respuesta: {ex.Message}";
+            }
         }
 
         public void EnviarArchivoPorPartes(string path)
@@ -90,14 +103,12 @@ namespace Cliente
             long offset = 0;
             long currentPart = 1;
 
-            // CMD 3: Enviar encabezado (nombre + tamaño)
             byte[] filenameBytes = Encoding.UTF8.GetBytes(filename);
             byte[] filenameLengthBytes = BitConverter.GetBytes(filenameBytes.Length);
             byte[] fileLengthBytes = BitConverter.GetBytes(fileLength);
             byte[] headerData = filenameLengthBytes.Concat(filenameBytes).Concat(fileLengthBytes).ToArray();
             EnviarComando(CommandConstants.EnviarImagenHeader, headerData);
 
-            // CMD 4: Enviar partes individuales
             while (offset < fileLength)
             {
                 int bytesToSend = (int)Math.Min(ProtocoloImagen.MaxFileSizePart, fileLength - offset);
@@ -111,13 +122,11 @@ namespace Cliente
             Console.WriteLine("Archivo enviado correctamente por partes.");
         }
 
-
         public void RecibirArchivoPorPartes()
         {
             var helper = _helper;
             FileStreamHelper fsHelper = new();
 
-            // Primero recibimos encabezado
             byte[] headerPrefix = helper.Receive(ProtocolConstants.HEADER_SIZE);
             string tipoHeader = Encoding.UTF8.GetString(headerPrefix);
 
@@ -151,7 +160,6 @@ namespace Cliente
 
             while (offset < fileSize)
             {
-                // Recibir el siguiente paquete que debería ser una parte de la imagen
                 byte[] partHeader = helper.Receive(ProtocolConstants.HEADER_SIZE);
                 string tipoParte = Encoding.UTF8.GetString(partHeader);
                 if (tipoParte != ProtocolConstants.Response)
@@ -178,13 +186,17 @@ namespace Cliente
             Console.WriteLine($"Archivo '{filename}' recibido correctamente.");
         }
 
-
-
-
+        public void Cerrar()
+        {
+            try
+            {
+                _socket.Shutdown(SocketShutdown.Both);
+            }
+            catch { }
+            finally
+            {
+                _socket.Close();
+            }
+        }
     }
-
-
 }
-
-
-

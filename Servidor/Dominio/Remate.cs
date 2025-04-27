@@ -1,6 +1,6 @@
 ﻿namespace Servidor.Dominio
 {
-    public class Oferta
+    public class Remate
     {
         public int ArticuloID { get; set; }
         public string Usuario { get; set; }

@@ -16,6 +16,9 @@
         public const int ListarArticulosConImagen = 12;
         public const int SolicitarImagenArticulo = 13;
         public const int EliminarArticulo = 14;
-
+        public const int RegistrarUsuario = 15;
+        public const int FiltrarArticulosPorCategoria = 16;
+        public const int ObtenerOfertasUsuario = 17;
+        public const int ObtenerRematesGanados = 18;
     }
 }
