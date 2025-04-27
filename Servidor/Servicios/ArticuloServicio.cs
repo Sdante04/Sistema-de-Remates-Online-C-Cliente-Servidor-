@@ -17,6 +17,8 @@ namespace Servidor.Servicios
         private const int MaxStringLength = 100;
         private const int StringByteSize = MaxStringLength * 4;
         private const string ArticulosFilePath = "articulos.bin";
+        private const string OfertasFilePath = "ofertas.bin";
+        private const string RematesFilePath = "remates.bin";
 
         private struct ArticuloLocal
         {
@@ -32,9 +34,28 @@ namespace Servidor.Servicios
             public byte[] UsuarioGanadorBytes;
         }
 
+        private struct OfertaLocal
+        {
+            public int ArticuloID;
+            public byte[] UsuarioBytes;
+            public int Monto;
+            public long FechaTicks;
+        }
+
+        private struct RemateLocal
+        {
+            public int ArticuloID;
+            public byte[] TituloBytes;
+            public int PrecioFinal;
+            public byte[] UsuarioGanadorBytes;
+            public long FechaCierreTicks;
+        }
+
         public ArticuloServicio()
         {
             CargarArticulosDesdeArchivo();
+            CargarOfertasDesdeArchivo();
+            CargarRematesDesdeArchivo();
         }
 
         private void CargarArticulosDesdeArchivo()
@@ -125,6 +146,104 @@ namespace Servidor.Servicios
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Error cargando artículos desde el archivo: {ex.Message}");
+                }
+            }
+        }
+
+        private void CargarOfertasDesdeArchivo()
+        {
+            lock (_lock)
+            {
+                if (!File.Exists(OfertasFilePath))
+                {
+                    Console.WriteLine("Archivo ofertas.bin no encontrado. No se cargaron ofertas.");
+                    return;
+                }
+
+                try
+                {
+                    using (FileStream fs = new FileStream(OfertasFilePath, FileMode.Open, FileAccess.Read))
+                    using (BinaryReader reader = new BinaryReader(fs))
+                    {
+                        int recordSize = sizeof(int) + StringByteSize + sizeof(int) + sizeof(long);
+                        int recordCount = (int)(fs.Length / recordSize);
+
+                        for (int i = 0; i < recordCount; i++)
+                        {
+                            fs.Seek(i * recordSize, SeekOrigin.Begin);
+
+                            int articuloID = reader.ReadInt32();
+                            string usuario = DecodeByteArrayToString(reader.ReadBytes(StringByteSize));
+                            int monto = reader.ReadInt32();
+                            long fechaTicks = reader.ReadInt64();
+                            DateTime fecha = new DateTime(fechaTicks);
+
+                            var articulo = _articulos.FirstOrDefault(a => a.ID == articuloID);
+                            if (articulo != null)
+                            {
+                                articulo.Ofertas.Add(new Oferta
+                                {
+                                    ArticuloID = articuloID,
+                                    Usuario = usuario,
+                                    Monto = monto,
+                                    Fecha = fecha
+                                });
+                            }
+                        }
+                    }
+
+                    Console.WriteLine("Ofertas cargadas correctamente desde ofertas.bin.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error cargando ofertas: {ex.Message}");
+                }
+            }
+        }
+
+        private void CargarRematesDesdeArchivo()
+        {
+            lock (_lock)
+            {
+                if (!File.Exists(RematesFilePath))
+                {
+                    Console.WriteLine("Archivo remates.bin no encontrado. No se cargaron remates.");
+                    return;
+                }
+
+                try
+                {
+                    using (FileStream fs = new FileStream(RematesFilePath, FileMode.Open, FileAccess.Read))
+                    using (BinaryReader reader = new BinaryReader(fs))
+                    {
+                        int recordSize = sizeof(int) + StringByteSize + sizeof(int) + StringByteSize + sizeof(long);
+                        int recordCount = (int)(fs.Length / recordSize);
+
+                        for (int i = 0; i < recordCount; i++)
+                        {
+                            fs.Seek(i * recordSize, SeekOrigin.Begin);
+
+                            int articuloID = reader.ReadInt32();
+                            string titulo = DecodeByteArrayToString(reader.ReadBytes(StringByteSize));
+                            int precioFinal = reader.ReadInt32();
+                            string usuarioGanador = DecodeByteArrayToString(reader.ReadBytes(StringByteSize));
+                            long fechaCierreTicks = reader.ReadInt64();
+
+                            var articulo = _articulos.FirstOrDefault(a => a.ID == articuloID);
+                            if (articulo != null)
+                            {
+                                articulo.Finalizado = true;
+                                articulo.UsuarioGanador = usuarioGanador;
+                                articulo.FechaCierre = new DateTime(fechaCierreTicks);
+                            }
+                        }
+                    }
+
+                    Console.WriteLine("Remates cargados correctamente desde remates.bin.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error cargando remates: {ex.Message}");
                 }
             }
         }
@@ -376,12 +495,17 @@ namespace Servidor.Servicios
                 if (montoOfertado < ofertaMaxima * 1.1)
                     return $"La oferta debe superar al menos un 10% la oferta máxima actual: {ofertaMaxima}";
 
-                articulo.Ofertas.Add(new Oferta
+                var nuevaOferta = new Oferta
                 {
                     Usuario = usuario,
                     Monto = montoOfertado,
-                    Fecha = DateTime.Now
-                });
+                    Fecha = DateTime.Now,
+                    ArticuloID = articulo.ID
+                };
+
+                articulo.Ofertas.Add(nuevaOferta);
+
+                GuardarOfertaLocal(nuevaOferta);
 
                 GuardarArticulosEnArchivo();
 
@@ -470,6 +594,8 @@ namespace Servidor.Servicios
                         {
                             var mejorOferta = articulo.Ofertas.OrderByDescending(o => o.Monto).First();
                             articulo.UsuarioGanador = mejorOferta.Usuario;
+
+                            GuardarRemateLocal(articulo, mejorOferta.Monto);
                         }
                         cambios = true;
                     }
@@ -479,6 +605,45 @@ namespace Servidor.Servicios
                 {
                     GuardarArticulosEnArchivo();
                 }
+            }
+        }
+
+        private void GuardarOfertaLocal(Oferta oferta)
+        {
+            try
+            {
+                using (FileStream fs = new FileStream(OfertasFilePath, FileMode.Append, FileAccess.Write))
+                using (BinaryWriter writer = new BinaryWriter(fs))
+                {
+                    writer.Write(oferta.ArticuloID);
+                    writer.Write(EncodeStringToFixedSizeByteArray(oferta.Usuario, StringByteSize));
+                    writer.Write(oferta.Monto);
+                    writer.Write(oferta.Fecha.Ticks);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error guardando oferta: {ex.Message}");
+            }
+        }
+
+        private void GuardarRemateLocal(Articulo articulo, int precioFinal)
+        {
+            try
+            {
+                using (FileStream fs = new FileStream(RematesFilePath, FileMode.Append, FileAccess.Write))
+                using (BinaryWriter writer = new BinaryWriter(fs))
+                {
+                    writer.Write(articulo.ID);
+                    writer.Write(EncodeStringToFixedSizeByteArray(articulo.Titulo, StringByteSize));
+                    writer.Write(precioFinal);
+                    writer.Write(EncodeStringToFixedSizeByteArray(articulo.UsuarioGanador ?? "", StringByteSize));
+                    writer.Write(articulo.FechaCierre.Ticks);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error guardando remate: {ex.Message}");
             }
         }
 
