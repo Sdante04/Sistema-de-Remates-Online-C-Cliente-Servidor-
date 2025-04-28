@@ -437,15 +437,18 @@ namespace Servidor.Servicios
                 if (articulo == null)
                     return "Artículo no encontrado o no tienes permiso para editarlo.";
 
+                if (articulo.Ofertas.Any())
+                    return "No se puede editar un artículo con ofertas registradas.";
+
+                if (TieneRemateAsociado(id))
+                    return "No se puede editar un artículo asociado a un remate.";
+
                 string nuevoTitulo = partes[1];
                 string descripcion = partes[2];
                 string categoria = partes[3];
                 string precioStr = partes[4];
                 string fechaStr = partes[5];
                 string imagen = partes[6];
-
-                if (articulo.FechaCierre <= DateTime.Now)
-                    return "No se puede editar un remate finalizado.";
 
                 if (!string.IsNullOrWhiteSpace(nuevoTitulo))
                     articulo.Titulo = nuevoTitulo;
@@ -465,6 +468,41 @@ namespace Servidor.Servicios
                 GuardarArticulosEnArchivo();
 
                 return $"Artículo '{articulo.Titulo}' editado correctamente.";
+            }
+        }
+
+        private bool TieneRemateAsociado(int articuloID)
+        {
+            lock (_lock)
+            {
+                if (!File.Exists(RematesFilePath))
+                    return false;
+
+                try
+                {
+                    using (FileStream fs = new FileStream(RematesFilePath, FileMode.Open, FileAccess.Read))
+                    using (BinaryReader reader = new BinaryReader(fs))
+                    {
+                        int recordSize = sizeof(int) + StringByteSize + sizeof(int) + StringByteSize + sizeof(long);
+                        int recordCount = (int)(fs.Length / recordSize);
+
+                        for (int i = 0; i < recordCount; i++)
+                        {
+                            fs.Seek(i * recordSize, SeekOrigin.Begin);
+                            int id = reader.ReadInt32();
+                            if (id == articuloID)
+                                return true;
+                            fs.Seek(recordSize - sizeof(int), SeekOrigin.Current);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error verificando remates: {ex.Message}");
+                    return false;
+                }
+
+                return false;
             }
         }
 
