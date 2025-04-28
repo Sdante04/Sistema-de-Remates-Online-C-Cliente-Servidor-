@@ -266,9 +266,14 @@ namespace Servidor.Utils
                     }
                 }
             }
+            catch (SocketException sockEx)
+            {
+                Logger.Log($"[Cliente {_id}] Conexión cerrada: {sockEx.Message}");
+                _activo = false;
+            }
             catch (Exception ex)
             {
-                Logger.Error($"[Cliente {_id}] Error: {ex.Message}");
+                Logger.Error($"[Cliente {_id}] Error inesperado: {ex.Message}");
                 _activo = false;
             }
             finally
