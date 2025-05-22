@@ -1,102 +1,35 @@
-﻿using System.Net;
-using System.Net.Sockets;
-using Servidor.Utils;
-using Common.Config;
-using Servidor.Servicios;
+﻿using System.Net.Sockets;
+using System.Threading.Tasks;
 
-namespace Servidor
+namespace Common
 {
-    public class Server
+    public class NetworkHelper
     {
-        private static int contadorClientes = 0;
-        private static readonly List<HiloCliente> _clientesActivos = new();
-        private static readonly object _lockClientes = new object();
-        private static readonly ConfigManager ConfigManager = new ConfigManager();
+        private readonly Socket _socket;
+        public NetworkHelper(Socket socket) => _socket = socket;
 
-        private static bool _ejecutando = true;
-        private static Socket? _socketServidor;
-        private static readonly ArticuloServicio _articuloServicioCompartido = new();
-
-        public static void Main()
+        public async Task SendAsync(byte[] data)
         {
-            Logger.Log("Levantando servidor...");
-
-            _socketServidor = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            string serverIp = ConfigManager.Readsettings(ServerConfiguration.serverIPconfigKey);
-            int serverPort = int.Parse(ConfigManager.Readsettings(ServerConfiguration.serverPortConfKey));
-            var localEndpoint = new IPEndPoint(IPAddress.Parse(serverIp), serverPort);
-            _socketServidor.Bind(localEndpoint);
-            _socketServidor.Listen();
-
-            Logger.Log($"Esperando por clientes en la IP: {localEndpoint.Address} y escuchando en puerto: {localEndpoint.Port}");
-            Logger.Log("Escriba 'exit' o 'cerrar' para cerrar el servidor");
-
-            Thread hiloComandos = new Thread(EscucharComandoCierre);
-            hiloComandos.Start();
-
-            while (_ejecutando)
+            int offset = 0;
+            while (offset < data.Length)
             {
-                try
-                {
-                    Socket socketCliente = _socketServidor.Accept();
-
-                    int idCliente = Interlocked.Increment(ref contadorClientes);
-                    Logger.Log($"Nuevo cliente conectado (ID: {idCliente})");
-
-                    var hiloCliente = new HiloCliente(socketCliente, idCliente, _articuloServicioCompartido);
-
-                    lock (_lockClientes)
-                    {
-                        _clientesActivos.Add(hiloCliente);
-                    }
-
-                    Thread hilo = new Thread(hiloCliente.Atender);
-                    hilo.Start();
-                }
-                catch (SocketException ex)
-                {
-                    if (!_ejecutando)
-                        Logger.Log("Socket cerrado intencionalmente. Deteniendo servidor...");
-                    else
-                        Logger.Error("Error inesperado al aceptar cliente: " + ex.Message);
-                }
+                int sent = await _socket.SendAsync(data.AsMemory(offset), SocketFlags.None);
+                if (sent == 0) throw new SocketException();
+                offset += sent;
             }
-
-            Logger.Log("Cerrando conexiones activas...");
-
-            lock (_lockClientes)
-            {
-                foreach (var cliente in _clientesActivos)
-                {
-                    cliente.Cerrar();
-                }
-            }
-
-            Logger.Log("Servidor finalizado correctamente");
         }
 
-        private static void EscucharComandoCierre()
+        public async Task<byte[]> ReceiveAsync(int length)
         {
-            while (true)
+            byte[] buffer = new byte[length];
+            int offset = 0;
+            while (offset < length)
             {
-                string? comando = Console.ReadLine();
-                if (comando?.ToLower() is "exit" or "cerrar")
-                {
-                    Logger.Log("Se recibió comando de cierre. Apagando servidor...");
-                    _ejecutando = false;
-
-                    try
-                    {
-                        _socketServidor?.Close();
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Error("Error al cerrar el socket del servidor: " + ex.Message);
-                    }
-
-                    break;
-                }
+                int received = await _socket.ReceiveAsync(buffer.AsMemory(offset), SocketFlags.None);
+                if (received == 0) throw new SocketException();
+                offset += received;
             }
+            return buffer;
         }
     }
 }
