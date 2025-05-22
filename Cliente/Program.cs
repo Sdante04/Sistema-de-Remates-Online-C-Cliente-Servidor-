@@ -1,21 +1,19 @@
-﻿namespace Cliente
+﻿namespace Cliente;
+
+public class Program
 {
-    public class Program
+    public static async Task Main()
     {
-        public static void Main()
+        var cliente = new Cliente();
+        try
         {
-            var cliente = new Cliente();
-            try
-            {
-                cliente.Conectar();
-                cliente.IniciarMonitoreoCierre();
-                var menu = new MenuCliente(cliente);
-                menu.Mostrar();
-            }
-            finally
-            {
-                cliente.Cerrar();
-            }
+            await cliente.ConectarAsync();
+            var menu = new MenuCliente(cliente);
+            await menu.MostrarAsync();
+        }
+        finally
+        {
+            cliente.Cerrar();
         }
     }
 }
