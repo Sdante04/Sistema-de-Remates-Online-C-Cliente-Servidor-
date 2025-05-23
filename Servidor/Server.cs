@@ -29,8 +29,23 @@ namespace Servidor
             _socketServidor.Listen();
 
             Logger.Log($"Esperando por clientes en {localEndpoint.Address}:{localEndpoint.Port}");
+            Logger.Log("Escriba 'salir' y presione Enter para cerrar el servidor.");
 
-            AppDomain.CurrentDomain.ProcessExit += (s, e) => _ejecutando = false;
+            // Tarea que escucha la consola para cerrar
+            _ = Task.Run(() =>
+            {
+                while (true)
+                {
+                    string? input = Console.ReadLine();
+                    if (input?.Trim().ToLower() == "salir")
+                    {
+                        Logger.Log("Cierre solicitado por consola.");
+                        _ejecutando = false;
+                        try { _socketServidor?.Close(); } catch { }
+                        break;
+                    }
+                }
+            });
 
             while (_ejecutando)
             {
@@ -48,7 +63,7 @@ namespace Servidor
                         _clientesActivos.Add(handler);
                     }
 
-                    _ = Task.Run(() => handler.AtenderAsync()); 
+                    _ = Task.Run(() => handler.AtenderAsync());
                 }
                 catch (SocketException ex)
                 {
