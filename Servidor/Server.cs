@@ -1,35 +1,73 @@
-﻿using System.Net.Sockets;
-using System.Threading.Tasks;
+﻿using System.Net;
+using System.Net.Sockets;
+using Servidor.Utils;
+using Common.Config;
+using Servidor.Servicios;
 
-namespace Common
+namespace Servidor
 {
-    public class NetworkHelper
+    public class Server
     {
-        private readonly Socket _socket;
-        public NetworkHelper(Socket socket) => _socket = socket;
+        private static int contadorClientes = 0;
+        private static readonly List<ClienteHandler> _clientesActivos = new();
+        private static readonly object _lockClientes = new();
+        private static readonly ConfigManager ConfigManager = new();
 
-        public async Task SendAsync(byte[] data)
-        {
-            int offset = 0;
-            while (offset < data.Length)
-            {
-                int sent = await _socket.SendAsync(data.AsMemory(offset), SocketFlags.None);
-                if (sent == 0) throw new SocketException();
-                offset += sent;
-            }
-        }
+        private static bool _ejecutando = true;
+        private static Socket? _socketServidor;
+        private static readonly ArticuloServicio _articuloServicioCompartido = new();
 
-        public async Task<byte[]> ReceiveAsync(int length)
+        public static async Task Main()
         {
-            byte[] buffer = new byte[length];
-            int offset = 0;
-            while (offset < length)
+            Logger.Log("Levantando servidor...");
+
+            _socketServidor = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            string serverIp = ConfigManager.Readsettings(ServerConfiguration.serverIPconfigKey);
+            int serverPort = int.Parse(ConfigManager.Readsettings(ServerConfiguration.serverPortConfKey));
+            var localEndpoint = new IPEndPoint(IPAddress.Parse(serverIp), serverPort);
+            _socketServidor.Bind(localEndpoint);
+            _socketServidor.Listen();
+
+            Logger.Log($"Esperando por clientes en {localEndpoint.Address}:{localEndpoint.Port}");
+
+            AppDomain.CurrentDomain.ProcessExit += (s, e) => _ejecutando = false;
+
+            while (_ejecutando)
             {
-                int received = await _socket.ReceiveAsync(buffer.AsMemory(offset), SocketFlags.None);
-                if (received == 0) throw new SocketException();
-                offset += received;
+                try
+                {
+                    Socket socketCliente = await _socketServidor.AcceptAsync();
+
+                    int idCliente = Interlocked.Increment(ref contadorClientes);
+                    Logger.Log($"Nuevo cliente conectado (ID: {idCliente})");
+
+                    var handler = new ClienteHandler(socketCliente, idCliente, _articuloServicioCompartido);
+
+                    lock (_lockClientes)
+                    {
+                        _clientesActivos.Add(handler);
+                    }
+
+                    _ = Task.Run(() => handler.AtenderAsync()); 
+                }
+                catch (SocketException ex)
+                {
+                    if (!_ejecutando)
+                        Logger.Log("Socket cerrado intencionalmente.");
+                    else
+                        Logger.Error("Error inesperado al aceptar cliente: " + ex.Message);
+                }
             }
-            return buffer;
+
+            Logger.Log("Cerrando conexiones activas...");
+
+            lock (_lockClientes)
+            {
+                foreach (var cliente in _clientesActivos)
+                    cliente.Cerrar();
+            }
+
+            Logger.Log("Servidor finalizado.");
         }
     }
 }
