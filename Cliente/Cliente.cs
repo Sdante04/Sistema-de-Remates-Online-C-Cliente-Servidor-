@@ -26,24 +26,34 @@ public class Cliente
 
     public async Task EnviarComandoAsync(int comando, object datos)
     {
-        byte[] dataBytes;
+        try
+        {
+            byte[] dataBytes;
 
-        if (datos is string texto)
-            dataBytes = Encoding.UTF8.GetBytes(texto);
-        else if (datos is byte[] bytes)
-            dataBytes = bytes;
-        else
-            throw new ArgumentException("Tipo de datos no soportado. Usa string o byte[].");
+            if (datos is string texto)
+                dataBytes = Encoding.UTF8.GetBytes(texto);
+            else if (datos is byte[] bytes)
+                dataBytes = bytes;
+            else
+                throw new ArgumentException("Tipo de datos no soportado.");
 
-        byte[] header = Encoding.UTF8.GetBytes(ProtocolConstants.Request);
-        byte[] cmd = Encoding.UTF8.GetBytes(comando.ToString("D2"));
-        byte[] length = BitConverter.GetBytes(dataBytes.Length);
+            byte[] header = Encoding.UTF8.GetBytes(ProtocolConstants.Request);
+            byte[] cmd = Encoding.UTF8.GetBytes(comando.ToString("D2"));
+            byte[] length = BitConverter.GetBytes(dataBytes.Length);
 
-        await _helper.SendAsync(header);
-        await _helper.SendAsync(cmd);
-        await _helper.SendAsync(length);
-        await _helper.SendAsync(dataBytes);
+            await _helper.SendAsync(header);
+            await _helper.SendAsync(cmd);
+            await _helper.SendAsync(length);
+            await _helper.SendAsync(dataBytes);
+        }
+        catch (SocketException ex)
+        {
+            Console.WriteLine("Error de conexión al enviar datos: " + ex.Message);
+            Console.WriteLine("El servidor ha cerrado la conexion.");
+            Environment.Exit(0);
+        }
     }
+
 
     public async Task<(string respuesta, int comando)> RecibirRespuestaAsync()
     {
