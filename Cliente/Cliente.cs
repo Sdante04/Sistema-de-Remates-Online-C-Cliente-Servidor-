@@ -1,5 +1,4 @@
-﻿using Common.Config;
-using Common;
+﻿using Common;
 using System.Net.Sockets;
 using System.Text;
 
@@ -7,7 +6,6 @@ namespace Cliente
 {
     public class Cliente
     {
-        private static readonly ConfigManager ConfigManager = new ConfigManager();
         private Socket _socket;
         private NetworkHelper _helper;
 
@@ -18,8 +16,22 @@ namespace Cliente
 
         public void Conectar()
         {
-             string serverIp = ConfigManager.Readsettings(ClientConfiguration.serverIPconfigKey);
-              int serverPort = int.Parse(ConfigManager.Readsettings(ClientConfiguration.serverPortConfKey));
+            string serverIp = Environment.GetEnvironmentVariable("SERVER_IP");
+            if (string.IsNullOrEmpty(serverIp))
+            {
+                Console.WriteLine("SERVER_IP no definida. Usando 127.0.0.1 por defecto.");
+                serverIp = "127.0.0.1";
+            }
+
+            string serverPortStr = Environment.GetEnvironmentVariable("SERVER_PORT");
+            int serverPort;
+
+            if (string.IsNullOrEmpty(serverPortStr) || !int.TryParse(serverPortStr, out serverPort))
+            {
+                Console.WriteLine("SERVER_PORT no definida o inválida. Usando 5000 por defecto.");
+                serverPort = 5000;
+            }
+
             _socket.Connect(serverIp, serverPort);
             _helper = new NetworkHelper(_socket);
             Console.WriteLine("Conectado al servidor.");
@@ -33,11 +45,17 @@ namespace Cliente
                 {
                     try
                     {
-                        if (_socket.Poll(0, SelectMode.SelectRead) && _socket.Available == 0)
+                        if (_socket.Poll(0, SelectMode.SelectRead))
                         {
-                            Console.WriteLine("\nConexión del servidor finalizada");
-                            Environment.Exit(0);
+                            byte[] buffer = new byte[1];
+                            int received = _socket.Receive(buffer, SocketFlags.Peek); // Peeks sin consumir
+                            if (received == 0)
+                            {
+                                Console.WriteLine("\nConexión del servidor finalizada");
+                                Environment.Exit(0);
+                            }
                         }
+
                     }
                     catch
                     {

@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Servidor.Utils;
-using Common.Config;
 using Servidor.Servicios;
 
 namespace Servidor
@@ -11,8 +10,6 @@ namespace Servidor
         private static int contadorClientes = 0;
         private static readonly List<HiloCliente> _clientesActivos = new();
         private static readonly object _lockClientes = new object();
-        private static readonly ConfigManager ConfigManager = new ConfigManager();
-
         private static bool _ejecutando = true;
         private static Socket? _socketServidor;
         private static readonly ArticuloServicio _articuloServicioCompartido = new();
@@ -22,8 +19,8 @@ namespace Servidor
             Logger.Log("Levantando servidor...");
 
             _socketServidor = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            string serverIp = ConfigManager.Readsettings(ServerConfiguration.serverIPconfigKey);
-            int serverPort = int.Parse(ConfigManager.Readsettings(ServerConfiguration.serverPortConfKey));
+            string serverIp = Environment.GetEnvironmentVariable("SERVER_IP") ?? "127.0.0.1";
+            int serverPort = int.Parse(Environment.GetEnvironmentVariable("SERVER_PORT") ?? "5000");
             var localEndpoint = new IPEndPoint(IPAddress.Parse(serverIp), serverPort);
             _socketServidor.Bind(localEndpoint);
             _socketServidor.Listen();

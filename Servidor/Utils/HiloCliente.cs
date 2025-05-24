@@ -29,6 +29,8 @@ namespace Servidor.Utils
 
         public void Atender()
         {
+            Logger.Log($"HiloCliente iniciado para cliente ID: {_id}");
+
             var helper = new NetworkHelper(_socket);
             try
             {
@@ -328,6 +330,7 @@ namespace Servidor.Utils
         {
             _activo = false;
             try { _socket.Shutdown(SocketShutdown.Both); } catch { }
+            Logger.Error($"Error en cliente");
             _socket.Close();
         }
     }
