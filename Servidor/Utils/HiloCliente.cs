@@ -18,6 +18,8 @@ namespace Servidor.Utils
         private long _archivoActualTamanio = 0;
         private long _archivoActualOffset = 0;
         private string _usuarioActual = null;
+        private static readonly string _rutaImagenes = Environment.GetEnvironmentVariable("SERVER_IMAGE_PATH") ?? "/app/imagenes";
+
 
         public HiloCliente(Socket socket, int id, ArticuloServicio articuloServicio)
         {
@@ -102,11 +104,11 @@ namespace Servidor.Utils
                             int nameLen = BitConverter.ToInt32(rawData, 0);
                             string filename = Encoding.UTF8.GetString(rawData, 4, nameLen);
                             long fileSize = BitConverter.ToInt64(rawData, 4 + nameLen);
+                            _archivoActualNombre = Path.Combine(_rutaImagenes, filename);
 
                             if (File.Exists(filename))
                                 File.Delete(filename);
 
-                            _archivoActualNombre = filename;
                             _archivoActualTamanio = fileSize;
                             _archivoActualOffset = 0;
                             Logger.Log($"[Cliente {_id}] Recibiendo archivo '{filename}' ({fileSize} bytes)");
@@ -288,7 +290,7 @@ namespace Servidor.Utils
         private void EnviarArchivoAlCliente(NetworkHelper helper, string path)
         {
             FileStreamHelper fsHelper = new();
-            FileInfo info = new(path);
+            FileInfo info = new(Path.Combine(_rutaImagenes, path));
             string filename = info.Name;
             long fileLength = info.Length;
             long totalParts = ProtocoloImagen.CalcularCantidadDePartes(fileLength);
