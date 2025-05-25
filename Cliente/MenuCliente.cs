@@ -61,7 +61,7 @@ namespace Cliente
             _cliente = cliente;
         }
 
-        public void Mostrar()
+        public async Task MostrarAsync()
         {
             while (true)
             {
@@ -100,18 +100,18 @@ namespace Cliente
                 Console.Write("\nSelecciona una opción: ");
                 string op = Console.ReadLine();
 
-                if (op == "1") Login();
-                else if (op == "2") RegistrarUsuario();
-                else if (op == "3" && !string.IsNullOrEmpty(_usuarioActual)) PublicarArticulo();
-                else if (op == "4" && !string.IsNullOrEmpty(_usuarioActual)) EditarArticulo();
-                else if (op == "5" && !string.IsNullOrEmpty(_usuarioActual)) RealizarOferta();
-                else if (op == "6" && !string.IsNullOrEmpty(_usuarioActual)) ConsultarArticulo();
-                else if (op == "7" && !string.IsNullOrEmpty(_usuarioActual)) BuscarArticulosPorCategoria();
-                else if (op == "8" && !string.IsNullOrEmpty(_usuarioActual)) DescargarImagenArticulo();
-                else if (op == "9" && !string.IsNullOrEmpty(_usuarioActual)) EliminarArticulo();
-                else if (op == "10" && !string.IsNullOrEmpty(_usuarioActual)) VerHistorialActividades();
-                else if (op == "11") ConsultarDatosLocal();
-                else if (op == "12" && !string.IsNullOrEmpty(_usuarioActual)) CerrarSesion();
+                if (op == "1") await Login();
+                else if (op == "2") await RegistrarUsuario();
+                else if (op == "3" && !string.IsNullOrEmpty(_usuarioActual)) await PublicarArticulo();
+                else if (op == "4" && !string.IsNullOrEmpty(_usuarioActual)) await EditarArticulo();
+                else if (op == "5" && !string.IsNullOrEmpty(_usuarioActual)) await RealizarOferta();
+                else if (op == "6" && !string.IsNullOrEmpty(_usuarioActual)) await ConsultarArticulo();
+                else if (op == "7" && !string.IsNullOrEmpty(_usuarioActual)) await BuscarArticulosPorCategoria();
+                else if (op == "8" && !string.IsNullOrEmpty(_usuarioActual)) await DescargarImagenArticulo();
+                else if (op == "9" && !string.IsNullOrEmpty(_usuarioActual)) await EliminarArticulo();
+                else if (op == "10" && !string.IsNullOrEmpty(_usuarioActual)) await VerHistorialActividades();
+                else if (op == "11") await ConsultarDatosLocal();
+                else if (op == "12" && !string.IsNullOrEmpty(_usuarioActual)) await CerrarSesion();
                 else if (op == "0")
                 {
                     Console.WriteLine("Conexión terminada.");
@@ -130,16 +130,16 @@ namespace Cliente
             }
         }
 
-        private void Login()
+
+        private async Task Login()
         {
             Console.Write("Usuario: ");
             string usuario = Console.ReadLine();
             Console.Write("Contraseña: ");
             string contrasena = Console.ReadLine();
 
-            _cliente.EnviarComando(CommandConstants.Login, $"{usuario}|{contrasena}");
-            int cmd;
-            string respuesta = _cliente.RecibirRespuesta(out cmd);
+            await _cliente.EnviarComandoAsync(CommandConstants.Login, $"{usuario}|{contrasena}");
+            var (respuesta, cmd) = await _cliente.RecibirRespuestaAsync();
 
             if (respuesta == "LOGIN_OK")
             {
@@ -172,16 +172,15 @@ namespace Cliente
             }
         }
 
-        private void RegistrarUsuario()
+        private async Task RegistrarUsuario()
         {
             Console.Write("Nombre de usuario: ");
             string usuario = Console.ReadLine();
             Console.Write("Contraseña: ");
             string contrasena = Console.ReadLine();
 
-            _cliente.EnviarComando(CommandConstants.RegistrarUsuario, $"{usuario}|{contrasena}");
-            int cmd;
-            string respuesta = _cliente.RecibirRespuesta(out cmd);
+            await _cliente.EnviarComandoAsync(CommandConstants.RegistrarUsuario, $"{usuario}|{contrasena}");
+            var (respuesta, cmd) = await _cliente.RecibirRespuestaAsync();
 
             if (respuesta == "REGISTRO_OK")
             {
@@ -213,13 +212,13 @@ namespace Cliente
             }
         }
 
-        private void CerrarSesion()
+        private async Task CerrarSesion()
         {
             _usuarioActual = string.Empty;
             Console.WriteLine("Sesión cerrada exitosamente.");
         }
 
-        private void PublicarArticulo()
+        private async Task PublicarArticulo()
         {
             Console.Write("Título: ");
             string titulo = Console.ReadLine();
@@ -249,9 +248,8 @@ namespace Cliente
             }
 
             string datosParaValidar = $"{titulo}|{descripcion}|{categoria}|{precio}|{fecha}|";
-            _cliente.EnviarComando(CommandConstants.ValidarArticulo, datosParaValidar);
-            int cmdValidacion;
-            string validacion = _cliente.RecibirRespuesta(out cmdValidacion);
+            await _cliente.EnviarComandoAsync(CommandConstants.ValidarArticulo, datosParaValidar);
+            var (validacion, cmdValidacion) = await _cliente.RecibirRespuestaAsync();
 
             if (validacion != "VALIDO")
             {
@@ -271,7 +269,7 @@ namespace Cliente
                     try
                     {
                         nombreArchivoImagen = Path.GetFileName(ruta);
-                        _cliente.EnviarArchivoPorPartes(ruta);
+                        await _cliente.EnviarArchivoPorPartesAsync(ruta);
                     }
                     catch
                     {
@@ -286,9 +284,8 @@ namespace Cliente
             }
 
             string datos = $"{titulo}|{descripcion}|{categoria}|{precio}|{fecha}|{nombreArchivoImagen}";
-            _cliente.EnviarComando(CommandConstants.PublicarArticulo, datos);
-            int cmd;
-            string respuesta = _cliente.RecibirRespuesta(out cmd);
+            await _cliente.EnviarComandoAsync(CommandConstants.PublicarArticulo, datos);
+            var (respuesta, cmd) = await _cliente.RecibirRespuestaAsync();
 
             if (!respuesta.Contains("fue publicado correctamente"))
             {
@@ -328,11 +325,10 @@ namespace Cliente
             }
         }
 
-        private void EditarArticulo()
+        private async Task EditarArticulo()
         {
-            _cliente.EnviarComando(CommandConstants.ObtenerArticulosUsuario, "");
-            int cmd;
-            string respuesta = _cliente.RecibirRespuesta(out cmd);
+            await _cliente.EnviarComandoAsync(CommandConstants.ObtenerArticulosUsuario, "");
+            var (respuesta, cmd) = await _cliente.RecibirRespuestaAsync();
 
             if (respuesta == "SIN_ARTICULOS")
             {
@@ -423,7 +419,7 @@ namespace Cliente
                         if (File.Exists(ruta))
                         {
                             imagen = Path.GetFileName(ruta);
-                            _cliente.EnviarArchivoPorPartes(ruta);
+                            await _cliente.EnviarArchivoPorPartesAsync(ruta);
                         }
                         else
                         {
@@ -437,8 +433,8 @@ namespace Cliente
             }
 
             string datos = $"{seleccion}|{nuevoTitulo}|{descripcion}|{categoria}|{precio}|{fecha}|{imagen}";
-            _cliente.EnviarComando(CommandConstants.EditarArticulo, datos);
-            string resultado = _cliente.RecibirRespuesta(out cmd);
+            await _cliente.EnviarComandoAsync(CommandConstants.EditarArticulo, datos);
+            var (resultado, cmd2) = await _cliente.RecibirRespuestaAsync();
             Console.WriteLine(resultado);
 
             if (resultado.Contains("editado correctamente"))
@@ -466,12 +462,11 @@ namespace Cliente
             }
         }
 
-        private void RealizarOferta()
+        private async Task RealizarOferta()
         {
             Console.WriteLine("Lista de artículos en remate:");
-            _cliente.EnviarComando(CommandConstants.ListarArticulosRemate, "");
-            int cmd;
-            string respuesta = _cliente.RecibirRespuesta(out cmd);
+            await _cliente.EnviarComandoAsync(CommandConstants.ListarArticulosRemate, "");
+            var (respuesta, cmd) = await _cliente.RecibirRespuestaAsync();
 
             if (string.IsNullOrWhiteSpace(respuesta) || respuesta == "SIN_ARTICULOS")
             {
@@ -497,8 +492,8 @@ namespace Cliente
                 return;
             }
 
-            _cliente.EnviarComando(CommandConstants.RealizarOferta, $"{id}|{monto}");
-            string resultado = _cliente.RecibirRespuesta(out cmd);
+            await _cliente.EnviarComandoAsync(CommandConstants.RealizarOferta, $"{id}|{monto}");
+            var (resultado, cmd2) = await _cliente.RecibirRespuestaAsync();
             if (resultado.Contains("Oferta registrada"))
             {
                 try
@@ -525,12 +520,11 @@ namespace Cliente
             Console.WriteLine(resultado);
         }
 
-        private void ConsultarArticulo()
+        private async Task ConsultarArticulo()
         {
             Console.WriteLine("Lista de artículos:");
-            _cliente.EnviarComando(CommandConstants.ListarTodosLosArticulos, "");
-            int cmd;
-            string respuesta = _cliente.RecibirRespuesta(out cmd);
+            await _cliente.EnviarComandoAsync(CommandConstants.ListarTodosLosArticulos, "");
+            var (respuesta, cmd) = await _cliente.RecibirRespuestaAsync();
 
             if (string.IsNullOrWhiteSpace(respuesta) || respuesta == "SIN_ARTICULOS")
             {
@@ -548,8 +542,8 @@ namespace Cliente
                 return;
             }
 
-            _cliente.EnviarComando(CommandConstants.ConsultarArticulo, seleccion);
-            string detalle = _cliente.RecibirRespuesta(out cmd);
+            await _cliente.EnviarComandoAsync(CommandConstants.ConsultarArticulo, seleccion);
+            var (detalle, cmd2) = await _cliente.RecibirRespuestaAsync();
 
             if (detalle.Contains("no encontrado") || detalle == "ID inválido.")
             {
@@ -564,7 +558,7 @@ namespace Cliente
             }
         }
 
-        private void BuscarArticulosPorCategoria()
+        private async Task BuscarArticulosPorCategoria()
         {
             Console.Write("Ingrese la categoría para filtrar: ");
             string categoria = Console.ReadLine();
@@ -574,9 +568,8 @@ namespace Cliente
                 return;
             }
 
-            _cliente.EnviarComando(CommandConstants.FiltrarArticulosPorCategoria, categoria);
-            int cmd;
-            string respuesta = _cliente.RecibirRespuesta(out cmd);
+            await _cliente.EnviarComandoAsync(CommandConstants.FiltrarArticulosPorCategoria, categoria);
+            var (respuesta, cmd2) = await _cliente.RecibirRespuestaAsync();
 
             if (string.IsNullOrWhiteSpace(respuesta) || respuesta == "SIN_ARTICULOS")
             {
@@ -588,11 +581,10 @@ namespace Cliente
             Console.WriteLine(respuesta);
         }
 
-        private void DescargarImagenArticulo()
+        private async Task DescargarImagenArticulo()
         {
-            _cliente.EnviarComando(CommandConstants.ListarArticulosConImagen, "");
-            int cmd;
-            string respuesta = _cliente.RecibirRespuesta(out cmd);
+            await _cliente.EnviarComandoAsync(CommandConstants.ListarArticulosConImagen, "");
+            var (respuesta, cmd2) = await _cliente.RecibirRespuestaAsync();
 
             if (respuesta == "SIN_IMAGENES")
             {
@@ -606,17 +598,16 @@ namespace Cliente
             Console.Write("Selecciona el número de la imagen que deseas descargar: ");
             string seleccion = Console.ReadLine();
 
-            _cliente.EnviarComando(CommandConstants.SolicitarImagenArticulo, seleccion);
+            await _cliente.EnviarComandoAsync(CommandConstants.SolicitarImagenArticulo, seleccion);
 
-            _cliente.RecibirArchivoPorPartes();
+            await _cliente.RecibirArchivoPorPartesAsync();
         }
 
 
-        private void EliminarArticulo()
+        private async Task EliminarArticulo()
         {
-            _cliente.EnviarComando(CommandConstants.ObtenerArticulosUsuario, "");
-            int cmd;
-            string respuesta = _cliente.RecibirRespuesta(out cmd);
+            await _cliente.EnviarComandoAsync(CommandConstants.ObtenerArticulosUsuario, "");
+            var (respuesta, cmd) = await _cliente.RecibirRespuestaAsync();
 
             if (respuesta == "SIN_ARTICULOS")
             {
@@ -635,8 +626,8 @@ namespace Cliente
                 return;
             }
 
-            _cliente.EnviarComando(CommandConstants.EliminarArticulo, seleccion);
-            string resultado = _cliente.RecibirRespuesta(out cmd);
+            await _cliente.EnviarComandoAsync(CommandConstants.EliminarArticulo, seleccion);
+            var (resultado, cmd2) = await _cliente.RecibirRespuestaAsync();
             Console.WriteLine(resultado);
 
             if (resultado.Contains("eliminado correctamente"))
@@ -652,14 +643,13 @@ namespace Cliente
             }
         }
 
-        private void VerHistorialActividades()
+        private async Task VerHistorialActividades()
         {
             Console.WriteLine("\n=== Historial de Actividades ===");
 
             Console.WriteLine("\nArtículos publicados:");
-            _cliente.EnviarComando(CommandConstants.ObtenerArticulosUsuario, "");
-            int cmd;
-            string respuestaArticulos = _cliente.RecibirRespuesta(out cmd);
+            await _cliente.EnviarComandoAsync(CommandConstants.ObtenerArticulosUsuario, "");
+            var (respuestaArticulos, cmd) = await _cliente.RecibirRespuestaAsync();
             if (respuestaArticulos == "SIN_ARTICULOS")
             {
                 Console.WriteLine("No has publicado artículos.");
@@ -670,8 +660,8 @@ namespace Cliente
             }
 
             Console.WriteLine("\nOfertas realizadas:");
-            _cliente.EnviarComando(CommandConstants.ObtenerOfertasUsuario, "");
-            string respuestaOfertas = _cliente.RecibirRespuesta(out cmd);
+            await _cliente.EnviarComandoAsync(CommandConstants.ObtenerOfertasUsuario, "");
+            var (respuestaOfertas, cmd2) = await _cliente.RecibirRespuestaAsync();
             if (respuestaOfertas == "SIN_OFERTAS")
             {
                 Console.WriteLine("No has realizado ofertas.");
@@ -682,8 +672,8 @@ namespace Cliente
             }
 
             Console.WriteLine("\nRemates ganados:");
-            _cliente.EnviarComando(CommandConstants.ObtenerRematesGanados, "");
-            string respuestaRemates = _cliente.RecibirRespuesta(out cmd);
+            await _cliente.EnviarComandoAsync(CommandConstants.ObtenerRematesGanados, "");
+            var (respuestaRemates, cmd3) = await _cliente.RecibirRespuestaAsync();
             if (respuestaRemates == "SIN_REMATES")
             {
                 Console.WriteLine("No has ganado ningún remate.");
@@ -723,7 +713,7 @@ namespace Cliente
             }
         }
 
-        private void ConsultarDatosLocal()
+        private async Task ConsultarDatosLocal()
         {
             Console.WriteLine("\n=== Artículos Locales ===");
             try
