@@ -8,18 +8,12 @@ namespace Servidor
     public class Server
     {
         private static int contadorClientes = 0;
-<<<<<<< HEAD
-        private static readonly List<HiloCliente> _clientesActivos = new();
-        private static readonly object _lockClientes = new object();
-=======
         private static readonly List<ClienteHandler> _clientesActivos = new();
         private static readonly object _lockClientes = new();
-        private static readonly ConfigManager ConfigManager = new();
-
->>>>>>> Develop
         private static bool _ejecutando = true;
         private static Socket? _socketServidor;
         private static readonly ArticuloServicio _articuloServicioCompartido = new();
+
 
         public static async Task Main()
         {
