@@ -18,6 +18,7 @@ namespace Servidor.Utils
         private string _archivoActualNombre = "";
         private long _archivoActualTamanio = 0;
         private long _archivoActualOffset = 0;
+        private readonly string _rutaImagenes = Environment.GetEnvironmentVariable("SERVER_IMAGE_PATH") ?? "/app/imagenes";
 
         public ClienteHandler(Socket socket, int id, ArticuloServicio articuloServicio)
         {
@@ -144,10 +145,18 @@ namespace Servidor.Utils
                     int nameLen = BitConverter.ToInt32(rawData, 0);
                     string filename = Encoding.UTF8.GetString(rawData, 4, nameLen);
                     long fileSize = BitConverter.ToInt64(rawData, 4 + nameLen);
-                    if (File.Exists(filename)) File.Delete(filename);
-                    _archivoActualNombre = filename;
+
+                    string rutaImagenes = Environment.GetEnvironmentVariable("SERVER_IMAGE_PATH") ?? "/app/imagenes";
+                    string fullPath = Path.Combine(rutaImagenes, filename);
+
+                    if (File.Exists(fullPath))
+                        File.Delete(fullPath);
+
+                    _archivoActualNombre = fullPath;
                     _archivoActualTamanio = fileSize;
                     _archivoActualOffset = 0;
+
+                    Logger.Log($"[Cliente {_id}] Preparado para recibir archivo '{fullPath}' ({fileSize} bytes)");
                     return "";
 
                 case CommandConstants.EnviarImagenParte:
@@ -184,7 +193,8 @@ namespace Servidor.Utils
         private async Task EnviarArchivoAlClienteAsync(string path)
         {
             FileStreamHelper fsHelper = new();
-            FileInfo info = new(path);
+            string fullPath = Path.Combine(_rutaImagenes, Path.GetFileName(path));
+            FileInfo info = new(fullPath);
             string filename = info.Name;
             long fileLength = info.Length;
 

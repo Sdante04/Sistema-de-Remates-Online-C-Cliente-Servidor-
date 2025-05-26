@@ -681,28 +681,44 @@ namespace Cliente
             else
             {
                 Console.WriteLine(respuestaRemates);
-                var lineas = respuestaRemates.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+                var lineas = respuestaRemates
+                .Replace("\r\n", "\n")
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries);
                 foreach (var linea in lineas)
                 {
                     try
                     {
-                        var partes = linea.Split(',');
+                        string cleanLine = linea.Replace("Remate: ", "").Trim();
+                        var partes = cleanLine.Split(',');
+
                         int articuloId = int.Parse(partes[0].Split('=')[1]);
                         string titulo = partes[1].Split('=')[1].Trim();
                         int precioFinal = int.Parse(partes[2].Split('=')[1]);
                         DateTime fechaCierre = DateTime.ParseExact(partes[3].Split('=')[1].Trim(), "dd-MM-yyyy HH:mm", null);
 
-                        RemateGanadoLocal remate = new RemateGanadoLocal
+                        var articulosLocales = LeerTodosArticulosLocales();
+                        var articulo = articulosLocales.FirstOrDefault(a => a.ID == articuloId);
+                        if (articulo.ID != 0)
                         {
-                            ArticuloID = articuloId,
-                            TituloBytes = EncodeStringToFixedSizeByteArray(titulo, StringByteSize),
-                            PrecioFinal = precioFinal,
-                            UsuarioGanadorBytes = EncodeStringToFixedSizeByteArray(_usuarioActual, StringByteSize),
-                            FechaCierreTicks = fechaCierre.Ticks
-                        };
+                            articulo.Finalizado = true;
+                            articulo.UsuarioGanadorBytes = EncodeStringToFixedSizeByteArray(_usuarioActual, StringByteSize);
+                            ActualizarArticuloLocal(articuloId, articulo);
+                            Console.WriteLine($"Artículo ID {articuloId} actualizado como finalizado.");
+                        }
+
                         if (!RemateYaExiste(articuloId))
                         {
+                            RemateGanadoLocal remate = new RemateGanadoLocal
+                            {
+                                ArticuloID = articuloId,
+                                TituloBytes = EncodeStringToFixedSizeByteArray(titulo, StringByteSize),
+                                PrecioFinal = precioFinal,
+                                UsuarioGanadorBytes = EncodeStringToFixedSizeByteArray(_usuarioActual, StringByteSize),
+                                FechaCierreTicks = fechaCierre.Ticks
+                            };
+
                             GuardarRemateGanadoLocal(remate);
+                            Console.WriteLine($"Remate ganado ID {articuloId} guardado localmente.");
                         }
                     }
                     catch (Exception ex)
@@ -1001,6 +1017,7 @@ namespace Cliente
                     writer.Write(articulo.ImagenNombreArchivoBytes);
                     writer.Write(articulo.UsuarioBytes);
                     writer.Write(articulo.Finalizado);
+                    writer.Write(articulo.UsuarioGanadorBytes);
                 }
                 Console.WriteLine("Artículo guardado localmente.");
             }

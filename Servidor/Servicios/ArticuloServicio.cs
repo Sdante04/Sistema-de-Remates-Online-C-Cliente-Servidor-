@@ -51,12 +51,7 @@ namespace Servidor.Servicios
             public long FechaCierreTicks;
         }
 
-        public ArticuloServicio()
-        {
-            CargarArticulosDesdeArchivo();
-            CargarOfertasDesdeArchivo();
-            CargarRematesDesdeArchivo();
-        }
+        public ArticuloServicio() {}
 
         private void CargarArticulosDesdeArchivo()
         {
@@ -624,6 +619,7 @@ namespace Servidor.Servicios
                 bool cambios = false;
                 foreach (var articulo in _articulos)
                 {
+                    Console.WriteLine($"[DEBUG] FechaCierre: {articulo.FechaCierre:dd-MM-yyyy HH:mm:ss} | Ahora: {DateTime.Now:dd-MM-yyyy HH:mm:ss}");
                     if (!articulo.Finalizado && articulo.FechaCierre <= DateTime.Now)
                     {
                         articulo.Finalizado = true;
@@ -837,6 +833,13 @@ namespace Servidor.Servicios
             int actualLength = Array.IndexOf(byteArray, (byte)0);
             if (actualLength < 0) actualLength = byteArray.Length;
             return Encoding.UTF8.GetString(byteArray, 0, actualLength).TrimEnd('\0');
+        }
+
+        public void RecargarDesdeArchivos() 
+        {
+            CargarArticulosDesdeArchivo();
+            CargarOfertasDesdeArchivo();
+            CargarRematesDesdeArchivo();
         }
     }
 }

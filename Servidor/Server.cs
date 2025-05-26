@@ -29,7 +29,6 @@ namespace Servidor
             Logger.Log($"Esperando por clientes en {localEndpoint.Address}:{localEndpoint.Port}");
             Logger.Log("Escriba 'salir' y presione Enter para cerrar el servidor.");
 
-            // Tarea que escucha la consola para cerrar
             _ = Task.Run(() =>
             {
                 while (true)
@@ -49,6 +48,14 @@ namespace Servidor
             {
                 try
                 {
+                    var articuloServicio = _articuloServicioCompartido;
+                    var usuarioServicio = new UsuarioServicio(); 
+                    var cargador = new CargadorInicial(articuloServicio, usuarioServicio);
+
+                    Logger.Log("Cargando datos iniciales desde archivos...");
+                    await cargador.CargarTodoAsync();
+                    Logger.Log("Carga inicial completada.");
+                    
                     Socket socketCliente = await _socketServidor.AcceptAsync();
 
                     int idCliente = Interlocked.Increment(ref contadorClientes);
