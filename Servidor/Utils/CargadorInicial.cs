@@ -29,7 +29,6 @@ namespace Servidor.Utils
             }
             else
             {
-                // 1) Copiar los .bin en paralelo
                 var archivos = new[] { "articulos.bin", "ofertas.bin", "remates.bin", "usuarios.bin" };
                 var copias = new Task[archivos.Length];
                 for (int i = 0; i < archivos.Length; i++)
@@ -48,7 +47,6 @@ namespace Servidor.Utils
                 await Task.WhenAll(copias);
             }
 
-            // 2) Recargar los servicios en paralelo
             var tArt = Task.Run(() => _articuloServicio.RecargarDesdeArchivos());
             var tUsr = Task.Run(() => _usuarioServicio.RecargarDesdeArchivo());
             await Task.WhenAll(tArt, tUsr);
