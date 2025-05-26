@@ -49,9 +49,8 @@ namespace Servidor
                 try
                 {
                     var articuloServicio = _articuloServicioCompartido;
-                    var usuarioServicio = new UsuarioServicio(); 
-                    var cargador = new CargadorInicial(articuloServicio, usuarioServicio);
-
+                    var usuarioServicio = new UsuarioServicio();
+                    var cargador = new CargadorInicial(_articuloServicioCompartido, usuarioServicio);
                     Logger.Log("Cargando datos iniciales desde archivos...");
                     await cargador.CargarTodoAsync();
                     Logger.Log("Carga inicial completada.");

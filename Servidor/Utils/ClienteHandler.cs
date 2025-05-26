@@ -209,7 +209,7 @@ namespace Servidor.Utils
             while (offset < fileLength)
             {
                 int bytesToSend = (int)Math.Min(ProtocoloImagen.MaxFileSizePart, fileLength - offset);
-                byte[] buffer = fsHelper.Read(path, offset, bytesToSend);
+                byte[] buffer = fsHelper.Read(fullPath, offset, bytesToSend);
                 await EnviarComandoAsync(CommandConstants.EnviarImagenParte, buffer);
                 offset += bytesToSend;
             }
