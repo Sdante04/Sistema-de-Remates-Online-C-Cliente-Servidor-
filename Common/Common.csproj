@@ -9,6 +9,9 @@
   <ItemGroup>
     <Compile Remove="NewFolder" />
     <EmbeddedResource Remove="NewFolder" />
+    <Compile Remove="Config\**" />
+    <EmbeddedResource Remove="Config\**" />
+    <None Remove="Config\**" />
     <None Remove="NewFolder**" />
   </ItemGroup>
 

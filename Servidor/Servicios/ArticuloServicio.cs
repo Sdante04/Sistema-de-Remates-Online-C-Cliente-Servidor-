@@ -16,9 +16,12 @@ namespace Servidor.Servicios
 
         private const int MaxStringLength = 100;
         private const int StringByteSize = MaxStringLength * 4;
-        private const string ArticulosFilePath = "articulos.bin";
-        private const string OfertasFilePath = "ofertas.bin";
-        private const string RematesFilePath = "remates.bin";
+        private static readonly string BaseDataPath =
+     Environment.GetEnvironmentVariable("SERVER_DATA_PATH") ?? Path.Combine("Servidor", "Datos-Percargados");
+
+        private static readonly string ArticulosFilePath = Path.Combine(BaseDataPath, "articulos.bin");
+        private static readonly string OfertasFilePath = Path.Combine(BaseDataPath, "ofertas.bin");
+        private static readonly string RematesFilePath = Path.Combine(BaseDataPath, "remates.bin");
 
         private struct ArticuloLocal
         {
@@ -51,12 +54,7 @@ namespace Servidor.Servicios
             public long FechaCierreTicks;
         }
 
-        public ArticuloServicio()
-        {
-            CargarArticulosDesdeArchivo();
-            CargarOfertasDesdeArchivo();
-            CargarRematesDesdeArchivo();
-        }
+        public ArticuloServicio() {}
 
         private void CargarArticulosDesdeArchivo()
         {
@@ -624,6 +622,7 @@ namespace Servidor.Servicios
                 bool cambios = false;
                 foreach (var articulo in _articulos)
                 {
+                    Console.WriteLine($"[DEBUG] FechaCierre: {articulo.FechaCierre:dd-MM-yyyy HH:mm:ss} | Ahora: {DateTime.Now:dd-MM-yyyy HH:mm:ss}");
                     if (!articulo.Finalizado && articulo.FechaCierre <= DateTime.Now)
                     {
                         articulo.Finalizado = true;
@@ -837,6 +836,13 @@ namespace Servidor.Servicios
             int actualLength = Array.IndexOf(byteArray, (byte)0);
             if (actualLength < 0) actualLength = byteArray.Length;
             return Encoding.UTF8.GetString(byteArray, 0, actualLength).TrimEnd('\0');
+        }
+
+        public void RecargarDesdeArchivos() 
+        {
+            CargarArticulosDesdeArchivo();
+            CargarOfertasDesdeArchivo();
+            CargarRematesDesdeArchivo();
         }
     }
 }

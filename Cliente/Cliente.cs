@@ -1,5 +1,4 @@
-﻿using Common.Config;
-using Common;
+﻿using Common;
 using System.Net.Sockets;
 using System.Text;
 
@@ -7,7 +6,6 @@ namespace Cliente
 {
     public class Cliente
     {
-        private static readonly ConfigManager ConfigManager = new ConfigManager();
         private Socket _socket;
         private NetworkHelper _helper;
 
@@ -15,87 +13,85 @@ namespace Cliente
         {
             _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         }
-
-        public void Conectar()
+        public async Task ConectarAsync()
         {
-             string serverIp = ConfigManager.Readsettings(ClientConfiguration.serverIPconfigKey);
-              int serverPort = int.Parse(ConfigManager.Readsettings(ClientConfiguration.serverPortConfKey));
-            _socket.Connect(serverIp, serverPort);
+            string serverIp = Environment.GetEnvironmentVariable("SERVER_IP");
+            if (string.IsNullOrEmpty(serverIp))
+            {
+                Console.WriteLine("SERVER_IP no definida. Usando 127.0.0.1 por defecto.");
+                serverIp = "127.0.0.1";
+            }
+
+            string serverPortStr = Environment.GetEnvironmentVariable("SERVER_PORT");
+            int serverPort;
+
+            if (string.IsNullOrEmpty(serverPortStr) || !int.TryParse(serverPortStr, out serverPort))
+            {
+                Console.WriteLine("SERVER_PORT no definida o inválida. Usando 5000 por defecto.");
+                serverPort = 5000;
+            }
+
+            await _socket.ConnectAsync(serverIp, serverPort);
             _helper = new NetworkHelper(_socket);
             Console.WriteLine("Conectado al servidor.");
         }
 
-        public void IniciarMonitoreoCierre()
-        {
-            var hilo = new Thread(() =>
-            {
-                while (true)
-                {
-                    try
-                    {
-                        if (_socket.Poll(0, SelectMode.SelectRead) && _socket.Available == 0)
-                        {
-                            Console.WriteLine("\nConexión del servidor finalizada");
-                            Environment.Exit(0);
-                        }
-                    }
-                    catch
-                    {
-                        Environment.Exit(0);
-                    }
-                    Thread.Sleep(500);
-                }
-            });
-
-            hilo.IsBackground = true;
-            hilo.Start();
-        }
-
-        public void EnviarComando(int comando, object datos)
-        {
-            byte[] dataBytes;
-
-            if (datos is string texto)
-                dataBytes = Encoding.UTF8.GetBytes(texto);
-            else if (datos is byte[] bytes)
-                dataBytes = bytes;
-            else
-                throw new ArgumentException("Tipo de datos no soportado. Usa string o byte[].");
-
-            byte[] header = Encoding.UTF8.GetBytes(ProtocolConstants.Request);
-            byte[] cmd = Encoding.UTF8.GetBytes(comando.ToString("D2"));
-            byte[] length = BitConverter.GetBytes(dataBytes.Length);
-
-            _helper.Send(header);
-            _helper.Send(cmd);
-            _helper.Send(length);
-            _helper.Send(dataBytes);
-        }
-
-        public string RecibirRespuesta(out int comando)
+        public async Task EnviarComandoAsync(int comando, object datos)
         {
             try
             {
-                byte[] header = _helper.Receive(ProtocolConstants.HEADER_SIZE);
-                if (Encoding.UTF8.GetString(header) != ProtocolConstants.Response)
                 {
-                    comando = -1;
-                    return "Error: Respuesta inválida del servidor.";
-                }
+                    byte[] dataBytes;
 
-                comando = int.Parse(Encoding.UTF8.GetString(_helper.Receive(ProtocolConstants.CMD_SIZE)));
-                int len = BitConverter.ToInt32(_helper.Receive(ProtocolConstants.LENGTH_SIZE));
-                string datos = Encoding.UTF8.GetString(_helper.Receive(len));
-                return datos;
+                    if (datos is string texto)
+                        dataBytes = Encoding.UTF8.GetBytes(texto);
+                    else if (datos is byte[] bytes)
+                        dataBytes = bytes;
+                    else
+                        throw new ArgumentException("Tipo de datos no soportado.");
+
+                    byte[] header = Encoding.UTF8.GetBytes(ProtocolConstants.Request);
+                    byte[] cmd = Encoding.UTF8.GetBytes(comando.ToString("D2"));
+                    byte[] length = BitConverter.GetBytes(dataBytes.Length);
+
+                    await _helper.SendAsync(header);
+                    await _helper.SendAsync(cmd);
+                    await _helper.SendAsync(length);
+                    await _helper.SendAsync(dataBytes);
+                }
             }
-            catch (Exception ex)
+            catch (SocketException ex)
             {
-                comando = -1;
-                return $"Error al recibir respuesta: {ex.Message}";
+                Console.WriteLine("Error de conexión al enviar datos: " + ex.Message);
+                Console.WriteLine("El servidor ha cerrado la conexion.");
+                Environment.Exit(0);
             }
         }
 
-        public void EnviarArchivoPorPartes(string path)
+        
+
+        public async Task<(string respuesta, int comando)> RecibirRespuestaAsync()
+        {
+            try
+            {
+                byte[] header = await _helper.ReceiveAsync(ProtocolConstants.HEADER_SIZE);
+                if (Encoding.UTF8.GetString(header) != ProtocolConstants.Response)
+                {
+                    return ("Error: Respuesta inválida del servidor.", -1);
+                }
+
+                int comando = int.Parse(Encoding.UTF8.GetString(await _helper.ReceiveAsync(ProtocolConstants.CMD_SIZE)));
+                int len = BitConverter.ToInt32(await _helper.ReceiveAsync(ProtocolConstants.LENGTH_SIZE));
+                string datos = Encoding.UTF8.GetString(await _helper.ReceiveAsync(len));
+                return (datos, comando);
+            }
+            catch (Exception ex)
+            {
+                return ($"Error al recibir respuesta: {ex.Message}", -1);
+            }
+        }
+
+        public async Task EnviarArchivoPorPartesAsync(string path)
         {
             FileInfo info = new(path);
             string filename = info.Name;
@@ -110,13 +106,13 @@ namespace Cliente
             byte[] filenameLengthBytes = BitConverter.GetBytes(filenameBytes.Length);
             byte[] fileLengthBytes = BitConverter.GetBytes(fileLength);
             byte[] headerData = filenameLengthBytes.Concat(filenameBytes).Concat(fileLengthBytes).ToArray();
-            EnviarComando(CommandConstants.EnviarImagenHeader, headerData);
+            await EnviarComandoAsync(CommandConstants.EnviarImagenHeader, headerData);
 
             while (offset < fileLength)
             {
                 int bytesToSend = (int)Math.Min(ProtocoloImagen.MaxFileSizePart, fileLength - offset);
                 byte[] buffer = fsHelper.Read(path, offset, bytesToSend);
-                EnviarComando(CommandConstants.EnviarImagenParte, buffer);
+                await EnviarComandoAsync(CommandConstants.EnviarImagenParte, buffer);
                 Console.WriteLine($"Enviando parte {currentPart}/{totalParts} de {filename} ({bytesToSend} bytes)...");
                 offset += bytesToSend;
                 currentPart++;
@@ -125,12 +121,11 @@ namespace Cliente
             Console.WriteLine("Archivo enviado correctamente por partes.");
         }
 
-        public void RecibirArchivoPorPartes()
+        public async Task RecibirArchivoPorPartesAsync()
         {
-            var helper = _helper;
             FileStreamHelper fsHelper = new();
 
-            byte[] headerPrefix = helper.Receive(ProtocolConstants.HEADER_SIZE);
+            byte[] headerPrefix = await _helper.ReceiveAsync(ProtocolConstants.HEADER_SIZE);
             string tipoHeader = Encoding.UTF8.GetString(headerPrefix);
 
             if (tipoHeader != ProtocolConstants.Response)
@@ -139,9 +134,9 @@ namespace Cliente
                 return;
             }
 
-            int cmd = int.Parse(Encoding.UTF8.GetString(helper.Receive(ProtocolConstants.CMD_SIZE)));
-            int len = BitConverter.ToInt32(helper.Receive(ProtocolConstants.LENGTH_SIZE));
-            byte[] headerData = helper.Receive(len);
+            int cmd = int.Parse(Encoding.UTF8.GetString(await _helper.ReceiveAsync(ProtocolConstants.CMD_SIZE)));
+            int len = BitConverter.ToInt32(await _helper.ReceiveAsync(ProtocolConstants.LENGTH_SIZE));
+            byte[] headerData = await _helper.ReceiveAsync(len);
 
             if (cmd != CommandConstants.EnviarImagenHeader)
             {
@@ -160,7 +155,7 @@ namespace Cliente
 
             while (offset < fileSize)
             {
-                byte[] partHeader = helper.Receive(ProtocolConstants.HEADER_SIZE);
+                byte[] partHeader = await _helper.ReceiveAsync(ProtocolConstants.HEADER_SIZE);
                 string tipoParte = Encoding.UTF8.GetString(partHeader);
                 if (tipoParte != ProtocolConstants.Response)
                 {
@@ -168,9 +163,9 @@ namespace Cliente
                     return;
                 }
 
-                int cmdParte = int.Parse(Encoding.UTF8.GetString(helper.Receive(ProtocolConstants.CMD_SIZE)));
-                int lenParte = BitConverter.ToInt32(helper.Receive(ProtocolConstants.LENGTH_SIZE));
-                byte[] dataParte = helper.Receive(lenParte);
+                int cmdParte = int.Parse(Encoding.UTF8.GetString(await _helper.ReceiveAsync(ProtocolConstants.CMD_SIZE)));
+                int lenParte = BitConverter.ToInt32(await _helper.ReceiveAsync(ProtocolConstants.LENGTH_SIZE));
+                byte[] dataParte = await _helper.ReceiveAsync(lenParte);
 
                 if (cmdParte != CommandConstants.EnviarImagenParte)
                 {
@@ -186,18 +181,10 @@ namespace Cliente
             Console.WriteLine($"Archivo '{filename}' recibido correctamente.");
         }
 
-
         public void Cerrar()
         {
-            try
-            {
-                _socket.Shutdown(SocketShutdown.Both);
-            }
-            catch { }
-            finally
-            {
-                _socket.Close();
-            }
+            try { _socket.Shutdown(SocketShutdown.Both); } catch { }
+            _socket.Close();
         }
     }
 }

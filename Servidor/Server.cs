@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Servidor.Utils;
-using Common.Config;
 using Servidor.Servicios;
 
 namespace Servidor
@@ -9,54 +8,94 @@ namespace Servidor
     public class Server
     {
         private static int contadorClientes = 0;
-        private static readonly List<HiloCliente> _clientesActivos = new();
-        private static readonly object _lockClientes = new object();
-        private static readonly ConfigManager ConfigManager = new ConfigManager();
-
+        private static readonly List<ClienteHandler> _clientesActivos = new();
+        private static readonly object _lockClientes = new();
         private static bool _ejecutando = true;
         private static Socket? _socketServidor;
         private static readonly ArticuloServicio _articuloServicioCompartido = new();
 
-        public static void Main()
+
+        public static async Task Main()
         {
-            Logger.Log("Levantando servidor...");
+            string dataPath = Environment.GetEnvironmentVariable("SERVER_DATA_PATH")
+                      ?? Path.Combine("Servidor", "Datos-Percargados");
+
+            if (!Directory.Exists(dataPath))
+                Directory.CreateDirectory(dataPath);
+
+            if (!Directory.EnumerateFiles(dataPath).Any())
+            {
+                Console.WriteLine("[INFO] Carpeta de datos precargados está vacía. Copiando archivos desde copia interna...");
+                string backupPath = "/app/Servidor/datos_copia_interna";
+
+                if (Directory.Exists(backupPath))
+                {
+                    foreach (var archivo in Directory.GetFiles(backupPath))
+                    {
+                        string destino = Path.Combine(dataPath, Path.GetFileName(archivo));
+                        File.Copy(archivo, destino, overwrite: false);
+                        Console.WriteLine($"[INFO] Copiado: {Path.GetFileName(archivo)}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"[ADVERTENCIA] No se encontró la carpeta de backup en {backupPath}");
+                }
+            }
 
             _socketServidor = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            string serverIp = ConfigManager.Readsettings(ServerConfiguration.serverIPconfigKey);
-            int serverPort = int.Parse(ConfigManager.Readsettings(ServerConfiguration.serverPortConfKey));
+            string serverIp = Environment.GetEnvironmentVariable("SERVER_IP") ?? "127.0.0.1";
+            int serverPort = int.Parse(Environment.GetEnvironmentVariable("SERVER_PORT") ?? "5000");
             var localEndpoint = new IPEndPoint(IPAddress.Parse(serverIp), serverPort);
             _socketServidor.Bind(localEndpoint);
             _socketServidor.Listen();
 
-            Logger.Log($"Esperando por clientes en la IP: {localEndpoint.Address} y escuchando en puerto: {localEndpoint.Port}");
-            Logger.Log("Escriba 'exit' o 'cerrar' para cerrar el servidor");
+            Logger.Log($"Esperando por clientes en {localEndpoint.Address}:{localEndpoint.Port}");
+            Logger.Log("Escriba 'salir' y presione Enter para cerrar el servidor.");
 
-            Thread hiloComandos = new Thread(EscucharComandoCierre);
-            hiloComandos.Start();
+            _ = Task.Run(() =>
+            {
+                while (true)
+                {
+                    string? input = Console.ReadLine();
+                    if (input?.Trim().ToLower() == "salir")
+                    {
+                        Logger.Log("Cierre solicitado por consola.");
+                        _ejecutando = false;
+                        try { _socketServidor?.Close(); } catch { }
+                        break;
+                    }
+                }
+            });
 
             while (_ejecutando)
             {
                 try
                 {
-                    Socket socketCliente = _socketServidor.Accept();
+                    var articuloServicio = _articuloServicioCompartido;
+                    var usuarioServicio = new UsuarioServicio();
+                    var cargador = new CargadorInicial(_articuloServicioCompartido, usuarioServicio);
+                    Logger.Log("Cargando datos iniciales desde archivos...");
+                    await cargador.CargarTodoAsync();
+                    Logger.Log("Carga inicial completada.");
+                        Socket socketCliente = await _socketServidor.AcceptAsync();
 
                     int idCliente = Interlocked.Increment(ref contadorClientes);
                     Logger.Log($"Nuevo cliente conectado (ID: {idCliente})");
 
-                    var hiloCliente = new HiloCliente(socketCliente, idCliente, _articuloServicioCompartido);
+                    var handler = new ClienteHandler(socketCliente, idCliente, _articuloServicioCompartido);
 
                     lock (_lockClientes)
                     {
-                        _clientesActivos.Add(hiloCliente);
+                        _clientesActivos.Add(handler);
                     }
 
-                    Thread hilo = new Thread(hiloCliente.Atender);
-                    hilo.Start();
+                    _ = Task.Run(() => handler.AtenderAsync());
                 }
                 catch (SocketException ex)
                 {
                     if (!_ejecutando)
-                        Logger.Log("Socket cerrado intencionalmente. Deteniendo servidor...");
+                        Logger.Log("Socket cerrado intencionalmente.");
                     else
                         Logger.Error("Error inesperado al aceptar cliente: " + ex.Message);
                 }
@@ -67,36 +106,10 @@ namespace Servidor
             lock (_lockClientes)
             {
                 foreach (var cliente in _clientesActivos)
-                {
                     cliente.Cerrar();
-                }
             }
 
-            Logger.Log("Servidor finalizado correctamente");
-        }
-
-        private static void EscucharComandoCierre()
-        {
-            while (true)
-            {
-                string? comando = Console.ReadLine();
-                if (comando?.ToLower() is "exit" or "cerrar")
-                {
-                    Logger.Log("Se recibió comando de cierre. Apagando servidor...");
-                    _ejecutando = false;
-
-                    try
-                    {
-                        _socketServidor?.Close();
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Error("Error al cerrar el socket del servidor: " + ex.Message);
-                    }
-
-                    break;
-                }
-            }
+            Logger.Log("Servidor finalizado.");
         }
     }
 }

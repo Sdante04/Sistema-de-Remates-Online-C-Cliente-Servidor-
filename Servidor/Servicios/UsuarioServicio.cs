@@ -10,19 +10,14 @@ namespace Servidor.Servicios
     public class UsuarioServicio
     {
         private static readonly List<Usuario> _usuarios = new List<Usuario>();
-        private const string UsuariosFilePath = "usuarios_servidor.bin";
+        private static readonly string BaseDataPath =
+     Environment.GetEnvironmentVariable("SERVER_DATA_PATH") ?? Path.Combine("Servidor", "Datos-Percargados");
+
+        private static readonly string UsuariosFilePath = Path.Combine(BaseDataPath, "usuarios.bin");
         private const int MaxStringLength = 100;
         private const int StringByteSize = MaxStringLength * 4;
 
-        public UsuarioServicio()
-        {
-            CargarUsuariosDesdeArchivo();
-            if (!_usuarios.Any())
-            {
-                _usuarios.Add(new Usuario { NombreUsuario = "admin", Clave = "123" });
-                GuardarUsuariosEnArchivo();
-            }
-        }
+        public UsuarioServicio() {}
 
         private void CargarUsuariosDesdeArchivo()
         {
@@ -124,6 +119,18 @@ namespace Servidor.Servicios
             int actualLength = Array.IndexOf(byteArray, (byte)0);
             if (actualLength < 0) actualLength = byteArray.Length;
             return Encoding.UTF8.GetString(byteArray, 0, actualLength).TrimEnd('\0');
+        }
+
+        public void RecargarDesdeArchivo()
+        {
+            _usuarios.Clear();
+            CargarUsuariosDesdeArchivo();
+
+            if (!_usuarios.Any(u => u.NombreUsuario == "admin"))
+            {
+                _usuarios.Add(new Usuario { NombreUsuario = "admin", Clave = "123" });
+                GuardarUsuariosEnArchivo();
+            }
         }
     }
 }
