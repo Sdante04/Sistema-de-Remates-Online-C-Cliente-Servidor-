@@ -9,7 +9,6 @@ WORKDIR /app
 # Copia todos los archivos del proyecto local al directorio /app del contenedor
 COPY . .
 
-
 # Restaura las dependencias definidas en los archivos .csproj o .sln
 RUN dotnet restore
 

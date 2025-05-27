@@ -10,10 +10,10 @@ namespace Servidor.Servicios
     public class UsuarioServicio
     {
         private static readonly List<Usuario> _usuarios = new List<Usuario>();
-        private static readonly string DataPath =
-        Environment.GetEnvironmentVariable("CLIENT_DATA_PATH")
-        ?? Directory.GetCurrentDirectory();
-        private static readonly string UsuariosFilePath = Path.Combine(DataPath, "usuarios.bin");
+        private static readonly string BaseDataPath =
+     Environment.GetEnvironmentVariable("SERVER_DATA_PATH") ?? Path.Combine("Servidor", "Datos-Percargados");
+
+        private static readonly string UsuariosFilePath = Path.Combine(BaseDataPath, "usuarios.bin");
         private const int MaxStringLength = 100;
         private const int StringByteSize = MaxStringLength * 4;
 

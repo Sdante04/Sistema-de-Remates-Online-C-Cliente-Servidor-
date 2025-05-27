@@ -17,7 +17,31 @@ namespace Servidor
 
         public static async Task Main()
         {
-            Logger.Log("Levantando servidor...");
+            string dataPath = Environment.GetEnvironmentVariable("SERVER_DATA_PATH")
+                      ?? Path.Combine("Servidor", "Datos-Percargados");
+
+            if (!Directory.Exists(dataPath))
+                Directory.CreateDirectory(dataPath);
+
+            if (!Directory.EnumerateFiles(dataPath).Any())
+            {
+                Console.WriteLine("[INFO] Carpeta de datos precargados está vacía. Copiando archivos desde copia interna...");
+                string backupPath = "/app/Servidor/datos_copia_interna";
+
+                if (Directory.Exists(backupPath))
+                {
+                    foreach (var archivo in Directory.GetFiles(backupPath))
+                    {
+                        string destino = Path.Combine(dataPath, Path.GetFileName(archivo));
+                        File.Copy(archivo, destino, overwrite: false);
+                        Console.WriteLine($"[INFO] Copiado: {Path.GetFileName(archivo)}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"[ADVERTENCIA] No se encontró la carpeta de backup en {backupPath}");
+                }
+            }
 
             _socketServidor = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             string serverIp = Environment.GetEnvironmentVariable("SERVER_IP") ?? "127.0.0.1";
@@ -54,8 +78,7 @@ namespace Servidor
                     Logger.Log("Cargando datos iniciales desde archivos...");
                     await cargador.CargarTodoAsync();
                     Logger.Log("Carga inicial completada.");
-                    
-                    Socket socketCliente = await _socketServidor.AcceptAsync();
+                        Socket socketCliente = await _socketServidor.AcceptAsync();
 
                     int idCliente = Interlocked.Increment(ref contadorClientes);
                     Logger.Log($"Nuevo cliente conectado (ID: {idCliente})");

@@ -16,13 +16,12 @@ namespace Servidor.Servicios
 
         private const int MaxStringLength = 100;
         private const int StringByteSize = MaxStringLength * 4;
-        private static readonly string DataPath =
-                Environment.GetEnvironmentVariable("CLIENT_DATA_PATH")
-                ?? Directory.GetCurrentDirectory();
+        private static readonly string BaseDataPath =
+     Environment.GetEnvironmentVariable("SERVER_DATA_PATH") ?? Path.Combine("Servidor", "Datos-Percargados");
 
-        private static readonly string ArticulosFilePath = Path.Combine(DataPath, "articulos.bin");
-        private static readonly string OfertasFilePath = Path.Combine(DataPath, "ofertas.bin");
-        private static readonly string RematesFilePath = Path.Combine(DataPath, "remates.bin");
+        private static readonly string ArticulosFilePath = Path.Combine(BaseDataPath, "articulos.bin");
+        private static readonly string OfertasFilePath = Path.Combine(BaseDataPath, "ofertas.bin");
+        private static readonly string RematesFilePath = Path.Combine(BaseDataPath, "remates.bin");
 
         private struct ArticuloLocal
         {
