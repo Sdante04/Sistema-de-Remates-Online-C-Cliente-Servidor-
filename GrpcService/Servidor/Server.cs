@@ -15,7 +15,7 @@ namespace Servidor
         private static readonly ArticuloServicio _articuloServicioCompartido = new();
 
 
-        public static async Task Main()
+        public static async Task IniciarAsync()
         {
             Logger.Log("Levantando servidor...");
 
