@@ -479,6 +479,16 @@ namespace Servidor.Servicios
 
                 GuardarArticulosEnArchivo();
 
+                _ = EventPublisher.PublicarEventoAsync(new EventoArticulo
+                {
+                    Tipo = "Modificacion",
+                    Fecha = DateTime.Now,
+                    ArticuloId = articulo.ID,
+                    Titulo = articulo.Titulo,
+                    PrecioBase = articulo.PrecioBase,
+                    Usuario = articulo.Usuario
+                });
+
                 return $"Artículo '{articulo.Titulo}' editado correctamente.";
             }
         }
@@ -754,6 +764,16 @@ namespace Servidor.Servicios
 
                 _articulos.Remove(articulo);
                 eliminado = true;
+
+                _ = EventPublisher.PublicarEventoAsync(new EventoArticulo
+                {
+                    Tipo = "Baja",
+                    Fecha = DateTime.Now,
+                    ArticuloId = articulo.ID,
+                    Titulo = articulo.Titulo,
+                    PrecioBase = articulo.PrecioBase,
+                    Usuario = articulo.Usuario
+                });
 
                 if (!string.IsNullOrEmpty(articulo.ImagenNombreArchivo))
                 {

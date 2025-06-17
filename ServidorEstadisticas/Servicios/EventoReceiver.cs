@@ -49,6 +49,8 @@ namespace ServidorEstadisticas.Servicios
 
             await channel.BasicConsumeAsync(queue: queueName, autoAck: true, consumer: consumer);
 
+            await Task.Delay(-1); // Mantiene vivo el receptor indefinidamente
+
         }
     }
 }
