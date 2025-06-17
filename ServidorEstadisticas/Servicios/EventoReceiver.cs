@@ -49,28 +49,6 @@ namespace ServidorEstadisticas.Servicios
 
             await channel.BasicConsumeAsync(queue: queueName, autoAck: true, consumer: consumer);
 
-            Console.WriteLine("Presioná ENTER para mostrar estadísticas de logins...");
-            Console.ReadLine();
-
-            var estadisticas = EstadisticasService.ObtenerEstadisticasDeLogins();
-
-            Console.WriteLine("\n=== Estadísticas de logins por usuario ===");
-
-            if (estadisticas.Count == 0)
-            {
-                Console.WriteLine("No se registraron logins.");
-            }
-            else
-            {
-                foreach (var entry in estadisticas)
-                {
-                    Console.WriteLine($"Usuario: {entry.Key} | Logins: {entry.Value}");
-                }
-            }
-
-            Console.WriteLine("\nPresioná ENTER para salir...");
-            Console.ReadLine();
-
         }
     }
 }
