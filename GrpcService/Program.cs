@@ -1,14 +1,23 @@
+using GrpcService;
 using GrpcService.Services;
+using Servidor;
 
-var builder = WebApplication.CreateBuilder(args);
+public class Program
+{
+    public static async Task Main(string[] args)
+    {
+        // Levanta el servidor socket como una tarea paralela
+        _ = Task.Run(() => Server.Main());
 
-// Add services to the container.
-builder.Services.AddGrpc();
+        // Levanta el servidor gRPC
+        CreateHostBuilder(args).Build().Run();
+    }
 
-var app = builder.Build();
+    public static IHostBuilder CreateHostBuilder(string[] args) =>
+        Host.CreateDefaultBuilder(args)
+            .ConfigureWebHostDefaults(webBuilder =>
+            {
+                webBuilder.UseStartup<Startup>();
+            });
+}
 
-// Configure the HTTP request pipeline.
-app.MapGrpcService<GreeterService>();
-app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
-
-app.Run();
