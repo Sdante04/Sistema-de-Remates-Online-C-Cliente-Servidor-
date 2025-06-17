@@ -124,7 +124,12 @@ public static class RabbitHelper
     public static async Task<(IConnection connection, IChannel channel, string queueName)>
         CrearConsumidorFanoutAsync(string exchangeName)
     {
-        var factory = new ConnectionFactory { HostName = "localhost" };
+        var factory = new ConnectionFactory
+        {
+            HostName = "localhost",
+            UserName = "admin",
+            Password = "admin"
+        };
         var connection = await factory.CreateConnectionAsync();
         var channel = await connection.CreateChannelAsync();
 

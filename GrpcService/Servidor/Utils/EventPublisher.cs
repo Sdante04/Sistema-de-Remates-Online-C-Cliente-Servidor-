@@ -1,6 +1,9 @@
 ﻿using Common.Models;
 using RabbitMQ.Client;
 using System.Text;
+using Common.Models;
+using RabbitMQ.Client;
+using System.Text;
 using System.Text.Json;
 
 namespace Servidor.Servicios
@@ -9,7 +12,12 @@ namespace Servidor.Servicios
     {
         public static async Task PublicarEventoAsync(EventoBase evento)
         {
-            var factory = new ConnectionFactory { HostName = "localhost" };
+            var factory = new ConnectionFactory
+            {
+                HostName = "localhost",
+                UserName = "admin",
+                Password = "admin"
+            };
             using var connection = await factory.CreateConnectionAsync();
             using var channel = await connection.CreateChannelAsync();
 
@@ -17,14 +25,13 @@ namespace Servidor.Servicios
 
             var json = JsonSerializer.Serialize(evento, new JsonSerializerOptions
             {
-                WriteIndented = false,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                PropertyNamingPolicy = null
             });
 
             var body = Encoding.UTF8.GetBytes(json);
 
             await channel.BasicPublishAsync(exchange: "eventos", routingKey: "", body: body);
-            Console.WriteLine($"[>>] Evento publicado: {evento.Tipo}");
         }
     }
 }
+
