@@ -27,9 +27,9 @@ namespace ServidorEstadisticas.Servicios
                     EventoBase evento = tipo switch
                     {
                         "Login" => JsonSerializer.Deserialize<EventoUsuario>(json),
-                        "Alta Articulo" or "Baja Articulo" or "Modificacion Articulo" => JsonSerializer.Deserialize<EventoArticulo>(json),
+                        "Alta" or "Baja" or "Modificacion" => JsonSerializer.Deserialize<EventoArticulo>(json),
                         "Oferta" => JsonSerializer.Deserialize<EventoOferta>(json),
-                        "Remate Finalizado" => JsonSerializer.Deserialize<EventoRemate>(json),
+                        "RemateFinalizado" => JsonSerializer.Deserialize<EventoRemate>(json),
                         _ => null
                     };
 
@@ -48,7 +48,7 @@ namespace ServidorEstadisticas.Servicios
             };
 
             await channel.BasicConsumeAsync(queue: queueName, autoAck: true, consumer: consumer);
-            Console.ReadLine();
+
         }
     }
 }

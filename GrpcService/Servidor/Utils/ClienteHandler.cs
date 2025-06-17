@@ -77,7 +77,7 @@ namespace Servidor.Utils
                     var usuarioAutenticado = _us.Autenticar(parts[0], parts[1]);
                     if (usuarioAutenticado != null)
                     {
-                        _usuarioActual = usuario;
+                        _usuarioActual = usuarioAutenticado.NombreUsuario;
                         Logger.Log($"[Cliente {_id}] Usuario '{usuario}' inició sesión.");
                         return "LOGIN_OK";
                     }

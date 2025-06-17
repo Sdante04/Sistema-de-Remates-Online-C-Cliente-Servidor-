@@ -23,7 +23,7 @@ namespace Servidor.Servicios
 
             await channel.ExchangeDeclareAsync("eventos", ExchangeType.Fanout);
 
-            var json = JsonSerializer.Serialize(evento, new JsonSerializerOptions
+            var json = JsonSerializer.Serialize(evento, evento.GetType(), new JsonSerializerOptions
             {
                 PropertyNamingPolicy = null
             });
@@ -31,6 +31,7 @@ namespace Servidor.Servicios
             var body = Encoding.UTF8.GetBytes(json);
 
             await channel.BasicPublishAsync(exchange: "eventos", routingKey: "", body: body);
+
         }
     }
 }
