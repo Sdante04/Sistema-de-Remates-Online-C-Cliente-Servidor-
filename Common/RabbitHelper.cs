@@ -118,3 +118,21 @@ public class Rpc
         Console.WriteLine(" [.] Got '{0}'", response);
     }
 }
+
+public static class RabbitHelper
+{
+    public static async Task<(IConnection connection, IChannel channel, string queueName)>
+        CrearConsumidorFanoutAsync(string exchangeName)
+    {
+        var factory = new ConnectionFactory { HostName = "localhost" };
+        var connection = await factory.CreateConnectionAsync();
+        var channel = await connection.CreateChannelAsync();
+
+        await channel.ExchangeDeclareAsync(exchangeName, ExchangeType.Fanout);
+
+        var queue = await channel.QueueDeclareAsync();
+        await channel.QueueBindAsync(queue.QueueName, exchangeName, "");
+
+        return (connection, channel, queue.QueueName);
+    }
+}
