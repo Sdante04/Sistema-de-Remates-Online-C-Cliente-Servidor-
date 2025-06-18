@@ -3,6 +3,7 @@ using RabbitMQ.Client.Events;
 using System.Collections.Concurrent;
 using System.Text;
 
+namespace Common;
 public class RpcClient : IAsyncDisposable
 {
     private const string QUEUE_NAME = "rpc_queue";
@@ -140,4 +141,5 @@ public static class RabbitHelper
 
         return (connection, channel, queue.QueueName);
     }
+
 }
