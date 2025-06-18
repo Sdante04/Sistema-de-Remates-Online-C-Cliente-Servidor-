@@ -23,6 +23,7 @@ namespace ServidorEstadisticasRest.Servicios
 
             _ = Task.Run(async () =>
             {
+
                 var resultado = await EstadisticasService.ObtenerEventosPorUsuario(usuario);
                 estado.Resultado = resultado;
                 estado.Estado = "completo";

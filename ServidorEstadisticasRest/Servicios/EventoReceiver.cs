@@ -50,7 +50,7 @@ public class EventoReceiver : BackgroundService
 
         await channel.BasicConsumeAsync(queue: queueName, autoAck: true, consumer: consumer);
 
-        // Mantiene el servicio vivo hasta que se cancele
+    
         while (!stoppingToken.IsCancellationRequested)
         {
             await Task.Delay(1000, stoppingToken);
