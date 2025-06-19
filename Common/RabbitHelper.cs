@@ -18,7 +18,7 @@ public class RpcClient : IAsyncDisposable
 
     public RpcClient()
     {
-        _connectionFactory = new ConnectionFactory { HostName = "localhost" };
+        _connectionFactory = new ConnectionFactory { HostName = "rabbitmq" };
     }
 
     public async Task StartAsync()
@@ -127,7 +127,7 @@ public static class RabbitHelper
     {
         var factory = new ConnectionFactory
         {
-            HostName = "localhost",
+            HostName = "rabbitmq",
             UserName = "admin",
             Password = "admin"
         };

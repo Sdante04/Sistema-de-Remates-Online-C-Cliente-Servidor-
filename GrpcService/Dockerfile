@@ -1,25 +1,22 @@
-# Usa como base la imagen oficial de .NET 8 SDK (con herramientas para compilar apps)
-FROM mcr.microsoft.com/dotnet/sdk:8.0
+# Etapa de build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 
-
-# Define el directorio de trabajo dentro del contenedor (/app)
 WORKDIR /app
 
-
-# Copia todos los archivos del proyecto local al directorio /app del contenedor
+# Copiamos todo el contenido de la solución (Common, GrpcService, etc.)
 COPY . .
 
-
-# Restaura las dependencias definidas en los archivos .csproj o .sln
+# Restauramos y publicamos desde el subdirectorio correcto
+WORKDIR /app/GrpcService
 RUN dotnet restore
+RUN dotnet publish -c Release -o /app/publish
 
-# Publica el proyecto en modo Release y coloca los archivos compilados en /app/publish
-RUN dotnet publish Servidor/Servidor.csproj -c Release -o ./publish
+# Etapa de runtime
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
+WORKDIR /app
 
+COPY --from=build /app/publish .
 
-# Expone el puerto 5000 del contenedor (para que pueda ser mapeado al host)
 EXPOSE 5000
 
-# Define el comando que se ejecutará cuando el contenedor arranque
-ENTRYPOINT ["dotnet", "./publish/Servidor.dll"]
-
+ENTRYPOINT ["dotnet", "GrpcService.dll"]

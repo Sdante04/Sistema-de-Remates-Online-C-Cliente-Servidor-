@@ -16,8 +16,6 @@
 
             app.UseEndpoints(endpoints =>
             {
-                // Acá irás mapeando tus servicios gRPC
-                // endpoints.MapGrpcService<EventoService>();
             });
         }
     }
