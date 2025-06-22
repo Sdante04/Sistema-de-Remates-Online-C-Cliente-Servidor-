@@ -10,6 +10,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServidorEstadisticas", "ServidorEstadisticas\ServidorEstadisticas.csproj", "{A3C6B95D-099E-428C-A946-228C53E28CF5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClienteAdministrativo", "ClienteAdministrativo\ClienteAdministrativo.csproj", "{9BAF3C73-C000-4414-98C7-BC53957DDE6F}"
+	ProjectSection(ProjectDependencies) = postProject
+		{FF3D9ADA-D378-4AA5-AC72-ABB6FE299F0C} = {FF3D9ADA-D378-4AA5-AC72-ABB6FE299F0C}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GrpcService", "GrpcService\GrpcService.csproj", "{14965E0F-FFBE-4A0A-9E81-B50D849C2998}"
 EndProject

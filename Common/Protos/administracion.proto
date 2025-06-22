@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+option csharp_namespace = "Remate.GRPC";
+
+package administracion;
+
+service Administracion {
+  rpc ABMArticulo (ABMArticuloRequest) returns (ABMArticuloResponse);
+
+  rpc ConsultarHistorial (HistorialRequest) returns (HistorialResponse);
+
+  rpc VerProximosIniciosSesion (IniciosSesionRequest) returns (stream InicioSesionResponse);
+
+  rpc SubirArchivo (SubirArchivoRequest) returns (SubirArchivoResponse);
+}
+
+message ABMArticuloRequest {
+  string operacion = 1;
+  int32 id = 2;
+  string titulo = 3;
+  string descripcion = 4;
+  string categoria = 5;
+  int32 precioBase = 6;
+  string usuario = 7;
+  string fechaCierre = 8;
+  string imagenNombreArchivo = 9;
+}
+
+message ABMArticuloResponse {
+  string mensaje = 1;
+}
+
+message HistorialRequest {
+  string nombreUsuario = 1;
+}
+
+message HistorialResponse {
+  repeated string actividades = 1;
+}
+
+message IniciosSesionRequest {
+  int32 cantidad = 1;
+}
+
+message InicioSesionResponse {
+  string nombreUsuario = 1;
+  string timestamp = 2;
+}
+
+message SubirArchivoRequest {
+  string nombre_archivo = 1;
+  bytes datos = 2;
+  bool es_ultima_parte = 3;
+}
+
+message SubirArchivoResponse {
+  bool ok = 1;
+  string mensaje = 2;
+}

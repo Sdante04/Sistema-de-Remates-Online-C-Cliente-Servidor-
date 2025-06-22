@@ -156,6 +156,7 @@ namespace Cliente
                     {
                         GuardarUsuarioLocal(usuarioLocal);
                     }
+                    GuardarInicioSesionLocal(usuario, DateTime.UtcNow.Ticks);
                 }
                 catch (Exception ex)
                 {
@@ -171,6 +172,15 @@ namespace Cliente
                 Console.WriteLine($"Error al iniciar sesión: {respuesta}");
             }
         }
+
+        private void GuardarInicioSesionLocal(string usuario, long ticks)
+        {
+            using var fs = new FileStream("iniciosesion.bin", FileMode.Append, FileAccess.Write);
+            using var writer = new BinaryWriter(fs);
+            writer.Write(EncodeStringToFixedSizeByteArray(usuario, StringByteSize));
+            writer.Write(ticks);
+        }
+
 
         private async Task RegistrarUsuario()
         {
