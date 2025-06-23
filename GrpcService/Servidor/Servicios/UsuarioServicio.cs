@@ -96,6 +96,7 @@ namespace Servidor.Servicios
             return usuario;
         }
 
+
         public bool RegistrarUsuario(string nombreUsuario, string clave)
         {
             if (string.IsNullOrWhiteSpace(nombreUsuario) || string.IsNullOrWhiteSpace(clave))

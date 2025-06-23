@@ -1,5 +1,9 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 using Servidor.Utils;
 using Servidor.Servicios;
 
@@ -7,15 +11,19 @@ namespace Servidor
 {
     public class Server
     {
-        private static int contadorClientes = 0;
-        private static readonly List<ClienteHandler> _clientesActivos = new();
-        private static readonly object _lockClientes = new();
-        private static bool _ejecutando = true;
-        private static Socket? _socketServidor;
-        private static readonly ArticuloServicio _articuloServicioCompartido = new();
+        private readonly ArticuloServicio _articuloServicio;
+        private readonly List<ClienteHandler> _clientesActivos = new();
+        private readonly object _lockClientes = new();
+        private volatile bool _ejecutando = true;
+        private Socket? _socketServidor;
+        private int _contadorClientes = 0;
 
+        public Server(ArticuloServicio articuloServicio)
+        {
+            _articuloServicio = articuloServicio;
+        }
 
-        public static async Task IniciarAsync()
+        public async Task IniciarAsync()
         {
             Logger.Log("Levantando servidor...");
 
@@ -29,10 +37,10 @@ namespace Servidor
             Logger.Log($"Esperando por clientes en {localEndpoint.Address}:{localEndpoint.Port}");
             Logger.Log("Escriba 'salir' y presione Enter para cerrar el servidor.");
 
-            // Tarea que escucha la consola para cerrar
+            // Tarea para detectar cierre por consola
             _ = Task.Run(() =>
             {
-                while (true)
+                while (_ejecutando)
                 {
                     string? input = Console.ReadLine();
                     if (input?.Trim().ToLower() == "salir")
@@ -40,7 +48,6 @@ namespace Servidor
                         Logger.Log("Cierre solicitado por consola.");
                         _ejecutando = false;
                         try { _socketServidor?.Close(); } catch { }
-                        break;
                     }
                 }
             });
@@ -49,13 +56,12 @@ namespace Servidor
             {
                 try
                 {
-                    Socket socketCliente = await _socketServidor.AcceptAsync();
+                    var socketCliente = await _socketServidor.AcceptAsync();
 
-                    int idCliente = Interlocked.Increment(ref contadorClientes);
+                    int idCliente = Interlocked.Increment(ref _contadorClientes);
                     Logger.Log($"Nuevo cliente conectado (ID: {idCliente})");
 
-                    var handler = new ClienteHandler(socketCliente, idCliente, _articuloServicioCompartido);
-
+                    var handler = new ClienteHandler(socketCliente, idCliente, _articuloServicio);
                     lock (_lockClientes)
                     {
                         _clientesActivos.Add(handler);
@@ -73,7 +79,6 @@ namespace Servidor
             }
 
             Logger.Log("Cerrando conexiones activas...");
-
             lock (_lockClientes)
             {
                 foreach (var cliente in _clientesActivos)

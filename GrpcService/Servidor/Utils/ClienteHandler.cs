@@ -77,11 +77,15 @@ namespace Servidor.Utils
                     var usuarioAutenticado = _us.Autenticar(parts[0], parts[1]);
                     if (usuarioAutenticado != null)
                     {
-                        _usuarioActual = usuarioAutenticado.NombreUsuario;
+                        _usuarioActual = usuario;
+
+                        AdministracionServicio.NotificarInicioSesion(usuario);
+
                         Logger.Log($"[Cliente {_id}] Usuario '{usuario}' inició sesión.");
                         return "LOGIN_OK";
                     }
                     return "LOGIN_FAIL";
+
 
                 case CommandConstants.RegistrarUsuario:
                     var partesRegistro = data.Split('|');
@@ -118,15 +122,19 @@ namespace Servidor.Utils
 
                 case CommandConstants.ObtenerArticulosUsuario:
                     if (_usuarioActual == null) return "NO_AUTENTICADO";
+                    _articuloServicio.CargarArticulosDesdeArchivo();
                     return _articuloServicio.ObtenerArticulosDeUsuario(_usuarioActual);
 
                 case CommandConstants.ListarArticulosRemate:
+                    _articuloServicio.CargarArticulosDesdeArchivo();
                     return _articuloServicio.ObtenerTodosLosArticulosEnRemate();
 
                 case CommandConstants.ListarTodosLosArticulos:
+                    _articuloServicio.CargarArticulosDesdeArchivo();
                     return _articuloServicio.ObtenerTodosLosArticulos();
 
                 case CommandConstants.FiltrarArticulosPorCategoria:
+                    _articuloServicio.CargarArticulosDesdeArchivo();
                     return _articuloServicio.FiltrarArticulosPorCategoria(data);
 
                 case CommandConstants.ConsultarArticulo:

@@ -522,6 +522,9 @@ namespace Cliente
 
         private async Task ConsultarArticulo()
         {
+            var articulos = LeerTodosArticulosLocales();
+            Console.WriteLine($"Artículos locales: {articulos.Count}");
+
             Console.WriteLine("Lista de artículos:");
             await _cliente.EnviarComandoAsync(CommandConstants.ListarTodosLosArticulos, "");
             var (respuesta, cmd) = await _cliente.RecibirRespuestaAsync();
