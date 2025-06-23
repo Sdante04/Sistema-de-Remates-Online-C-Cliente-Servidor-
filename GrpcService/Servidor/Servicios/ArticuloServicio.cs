@@ -406,6 +406,16 @@ namespace Servidor.Servicios
 
                 GuardarArticulosEnArchivo();
 
+                _ = EventPublisher.PublicarEventoAsync(new EventoArticulo
+                {
+                    Tipo = "Modificacion",
+                    Fecha = DateTime.Now,
+                    ArticuloId = articulo.ID,
+                    Titulo = articulo.Titulo,
+                    PrecioBase = articulo.PrecioBase,
+                    Usuario = articulo.Usuario
+                });
+
                 return $"Artículo '{articulo.Titulo}' editado correctamente.";
             }
         }

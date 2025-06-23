@@ -1,4 +1,5 @@
 version: "3.9"
+
 services:
   rabbitmq:
     image: rabbitmq:3-management
@@ -13,10 +14,10 @@ services:
       - remate-network
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "status"]
-      interval: 10s       # Esperar más entre chequeos
+      interval: 10s
       timeout: 5s
-      retries: 10         # Más reintentos
-      start_period: 30s   # Esperar más antes del primer chequeo
+      retries: 10
+      start_period: 30s
 
   servidor:
     build:
@@ -31,9 +32,12 @@ services:
       SERVER_PORT: 5000
       SERVER_IMAGE_PATH: /app/imagenes
       SERVER_DATA_PATH: /app/Servidor/Datos-Percargados
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: admin
+      RABBITMQ_PASS: admin
     volumes:
-      - "C:/Users/Usuario/Desktop/imagenes_remates:/app/imagenes"
-      - "C:/Users/Usuario/Desktop/datos_precargados:/app/Servidor/Datos-Percargados"
+      - C:/Users/Santiago/Desktop/imagenes_remates:/app/imagenes
+      - C:/Users/Santiago/Desktop/datos_precargados:/app/Servidor/Datos-Percargados
     networks:
       - remate-network
     depends_on:
@@ -47,6 +51,10 @@ services:
     container_name: servidor-estadisticas
     ports:
       - "5278:8080"
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: admin
+      RABBITMQ_PASS: admin
     networks:
       - remate-network
     depends_on:

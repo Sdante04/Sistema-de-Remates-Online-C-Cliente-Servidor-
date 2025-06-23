@@ -14,7 +14,7 @@ namespace Servidor.Servicios
         {
             var factory = new ConnectionFactory
             {
-                HostName = "localhost",
+                HostName = "rabbitmq",
                 UserName = "admin",
                 Password = "admin"
             };
