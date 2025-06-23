@@ -8,6 +8,7 @@ namespace Servidor.Servicios;
 public class AdministracionServicio : Administracion.AdministracionBase
 {
     private readonly ArticuloServicio _articuloServicio = new();
+    private readonly UsuarioServicio _usuarioServicio = new();
 
     private static readonly List<Channel<InicioSesionResponse>> _subscriptores = new();
 
@@ -88,52 +89,35 @@ public class AdministracionServicio : Administracion.AdministracionBase
     public override Task<HistorialResponse> ConsultarHistorial(HistorialRequest request, ServerCallContext context)
     {
         string usuario = request.NombreUsuario?.Trim();
-
         if (string.IsNullOrWhiteSpace(usuario))
-        {
-            return Task.FromResult(new HistorialResponse
-            {
-                Actividades = { "ERROR: Debes ingresar un nombre de usuario válido." }
-            });
-        }
+            return Error("Debes ingresar un nombre de usuario válido.");
+
+        var usuarioEntidad = _usuarioServicio.ObtenerUsuarioPorNombre(usuario);
+        if (usuarioEntidad is null)
+            return Error($"ERROR: El usuario '{usuario}' no existe.");
 
         var actividades = new List<string>();
 
         var articulosTexto = _articuloServicio.ObtenerArticulosDeUsuario(usuario);
-
         if (articulosTexto == "SIN_ARTICULOS")
-        {
-            actividades.Add($"ERROR: El usuario '{usuario}' no existe o no tiene publicaciones.");
-            return Task.FromResult(new HistorialResponse { Actividades = { actividades } });
-        }
-
-        var lineasArticulos = articulosTexto.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        foreach (var linea in lineasArticulos)
-        {
-            actividades.Add($"PUBLICADO | {linea.Trim()}");
-        }
+            actividades.Add("No ha publicado artículos.");
+        else
+            SplitYAgregar(actividades, articulosTexto, "PUBLICADO");
 
         var ofertasTexto = _articuloServicio.ObtenerOfertasDeUsuario(usuario);
-
-        if (!string.IsNullOrWhiteSpace(ofertasTexto))
-        {
-            var lineasOfertas = ofertasTexto.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-            foreach (var linea in lineasOfertas)
-            {
-                actividades.Add($"OFERTA | {linea.Trim()}");
-            }
-        }
+        if (string.IsNullOrWhiteSpace(ofertasTexto) || ofertasTexto == "SIN_OFERTAS")
+            actividades.Add("No ha realizado ofertas.");
+        else
+            SplitYAgregar(actividades, ofertasTexto, "OFERTA");
 
         var rematesTexto = _articuloServicio.ObtenerRematesGanadosPorUsuario(usuario);
+        if (string.IsNullOrWhiteSpace(rematesTexto))
+            actividades.Add("No ha ganado ningún remate.");
+        else
+            SplitYAgregar(actividades, rematesTexto, "REMATE_GANADO");
 
-        if (!string.IsNullOrWhiteSpace(rematesTexto))
-        {
-            var lineasRemates = rematesTexto.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-            foreach (var linea in lineasRemates)
-            {
-                actividades.Add($"REMATE_GANADO | {linea.Trim()}");
-            }
-        }
+        if (actividades.Count == 0)
+            actividades.Add("El usuario existe tiene actividad registrada.");
 
         return Task.FromResult(new HistorialResponse
         {
@@ -142,8 +126,20 @@ public class AdministracionServicio : Administracion.AdministracionBase
     }
 
 
+    private Task<HistorialResponse> Error(string mensaje) =>
+    Task.FromResult(new HistorialResponse { Actividades = { mensaje } });
+    
+    private void SplitYAgregar(List<string> lista, string texto, string etiqueta)
+    {
+        foreach (var línea in texto
+                 .Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            lista.Add($"{etiqueta} | {línea.Trim()}");
+    }
 
-    public override async Task VerProximosIniciosSesion(IniciosSesionRequest request, IServerStreamWriter<InicioSesionResponse> responseStream, ServerCallContext context)
+
+
+
+public override async Task VerProximosIniciosSesion(IniciosSesionRequest request, IServerStreamWriter<InicioSesionResponse> responseStream, ServerCallContext context)
     {
         var canal = Channel.CreateUnbounded<InicioSesionResponse>();
         lock (_subscriptores)
