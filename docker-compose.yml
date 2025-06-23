@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    networks:
+      - remate-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  servidor:
+    build:
+      context: .
+      dockerfile: GrpcService/Dockerfile
+    container_name: servidor-app
+    ports:
+      - "5000:5000"   
+      - "8080:8080"   
+    environment:
+      TZ: America/Montevideo
+      SERVER_IP: 0.0.0.0
+      SERVER_PORT: 5000
+      SERVER_IMAGE_PATH: /app/imagenes
+      SERVER_DATA_PATH: /app/Servidor/Datos-Percargados
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: admin
+      RABBITMQ_PASS: admin
+    volumes:
+      - C:/Users/Santiago/Desktop/imagenes_remates:/app/imagenes
+      - C:/Users/Santiago/Desktop/datos_precargados:/app/Servidor/Datos-Percargados
+    networks:
+      - remate-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  estadisticas:
+    build:
+      context: .
+      dockerfile: ServidorEstadisticasRest/Dockerfile
+    container_name: servidor-estadisticas
+    ports:
+      - "5278:8080"
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: admin
+      RABBITMQ_PASS: admin
+    networks:
+      - remate-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+networks:
+  remate-network:
+    driver: bridge

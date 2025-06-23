@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Text;
+using Common.Models;
 
 namespace Servidor.Servicios
 {
@@ -75,8 +76,21 @@ namespace Servidor.Servicios
             if (string.IsNullOrWhiteSpace(nombreUsuario) || string.IsNullOrWhiteSpace(clave))
                 return null;
 
-            return _usuarios.FirstOrDefault(u => u.NombreUsuario == nombreUsuario && u.Clave == clave);
+            var usuario = _usuarios.FirstOrDefault(u => u.NombreUsuario == nombreUsuario && u.Clave == clave);
+
+            if (usuario != null)
+            {
+                _ = EventPublisher.PublicarEventoAsync(new EventoUsuario
+                {
+                    Tipo = "Login",
+                    Fecha = DateTime.Now,
+                    Usuario = usuario.NombreUsuario
+                });
+            }
+
+            return usuario;
         }
+
 
         public bool RegistrarUsuario(string nombreUsuario, string clave)
         {
