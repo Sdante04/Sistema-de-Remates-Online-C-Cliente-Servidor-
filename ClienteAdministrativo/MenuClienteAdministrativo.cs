@@ -529,8 +529,14 @@ namespace ClienteAdministrativo
 
             while (true)
             {
-                Console.Write("Nombre del usuario para consultar historial: ");
+                Console.Write("Nombre del usuario para consultar historial (0 para salir): ");
                 usuario = Console.ReadLine()?.Trim();
+
+                if (usuario == "0")
+                {
+                    Console.WriteLine("Saliendo de la consulta de historial...");
+                    return; // Termina el método
+                }
 
                 if (string.IsNullOrWhiteSpace(usuario))
                 {
@@ -638,6 +644,7 @@ namespace ClienteAdministrativo
         }
 
 
+
         private bool RemateYaExiste(int id)
         {
             var remates = LeerTodosRematesLocales();
@@ -666,25 +673,32 @@ namespace ClienteAdministrativo
 
         private async Task VerIniciosSesionAsync()
         {
-            Console.Write("Cantidad de próximos inicios de sesión a ver: ");
+            Console.Write("Teniendo en cuenta que esta accion no se podra cancelar, ingrese la cantidad de próximos inicios de sesión a ver: ");
             if (!int.TryParse(Console.ReadLine(), out int cantidad) || cantidad <= 0)
             {
                 Console.WriteLine("Cantidad inválida.");
                 return;
             }
 
-            var request = new IniciosSesionRequest { Cantidad = cantidad };
-
-            using var call = _client.VerProximosIniciosSesion(request);
-
-            Console.WriteLine($"\nPróximos {cantidad} inicios de sesión de clientes normales:\n");
-
-            await foreach (var inicio in call.ResponseStream.ReadAllAsync())
+            try
             {
-                Console.WriteLine($"• Usuario: {inicio.NombreUsuario} - Fecha y hora: {inicio.Timestamp}");
+                var request = new IniciosSesionRequest { Cantidad = cantidad };
+                using var call = _client.VerProximosIniciosSesion(request);
+
+                Console.WriteLine($"\nPróximos {cantidad} inicios de sesión de clientes normales:\n");
+
+                await foreach (var inicio in call.ResponseStream.ReadAllAsync())
+                {
+                    Console.WriteLine($"• Usuario: {inicio.NombreUsuario} - Fecha y hora: {inicio.Timestamp}");
+                }
+
+                Console.WriteLine("[DEBUG] Finalizó stream normalmente");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] No se pudo recibir el stream: {ex.Message}");
             }
         }
-
 
 
         private async Task EnviarArchivoPorPartesAsync(string rutaArchivo)

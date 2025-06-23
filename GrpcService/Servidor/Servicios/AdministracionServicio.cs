@@ -1,12 +1,33 @@
-using Grpc.Core;
+Ôªøusing Grpc.Core;
 using Remate.GRPC;
 using System.Text;
+using System.Threading.Channels;
 
 namespace Servidor.Servicios;
 
 public class AdministracionServicio : Administracion.AdministracionBase
 {
     private readonly ArticuloServicio _articuloServicio = new();
+
+    private static readonly List<Channel<InicioSesionResponse>> _subscriptores = new();
+
+    public static void NotificarInicioSesion(string nombreUsuario)
+    {
+        if (string.Equals(nombreUsuario, "admin", StringComparison.OrdinalIgnoreCase))
+            return; 
+
+        var evento = new InicioSesionResponse
+        {
+            NombreUsuario = nombreUsuario,
+            Timestamp = DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss")
+        };
+
+        lock (_subscriptores)
+        {
+            foreach (var canal in _subscriptores)
+                canal.Writer.TryWrite(evento);
+        }
+    }
 
     public override Task<ABMArticuloResponse> ABMArticulo(ABMArticuloRequest request, ServerCallContext context)
     {
@@ -29,7 +50,7 @@ public class AdministracionServicio : Administracion.AdministracionBase
         }
         else
         {
-            resultado = "OperaciÛn no v·lida.";
+            resultado = "Operaci√≥n no v√°lida.";
         }
 
         return Task.FromResult(new ABMArticuloResponse { Mensaje = resultado });
@@ -44,7 +65,7 @@ public class AdministracionServicio : Administracion.AdministracionBase
         {
             return Task.FromResult(new HistorialResponse
             {
-                Actividades = { "ERROR: Debes ingresar un nombre de usuario v·lido." }
+                Actividades = { "ERROR: Debes ingresar un nombre de usuario v√°lido." }
             });
         }
 
@@ -96,39 +117,31 @@ public class AdministracionServicio : Administracion.AdministracionBase
 
     public override async Task VerProximosIniciosSesion(IniciosSesionRequest request, IServerStreamWriter<InicioSesionResponse> responseStream, ServerCallContext context)
     {
-        const string path = "iniciosesion.bin";
-        const int maxStr = 100;
-        const int stringByteSize = maxStr * 4;
-
-        if (!File.Exists(path))
-            return;
-
-        var registros = new List<(string usuario, long ticks)>();
-
-        using var fs = File.OpenRead(path);
-        using var reader = new BinaryReader(fs);
-        while (fs.Position < fs.Length)
+        var canal = Channel.CreateUnbounded<InicioSesionResponse>();
+        lock (_subscriptores)
         {
-            var nameBytes = reader.ReadBytes(stringByteSize);
-            long ticks = reader.ReadInt64();
-            string user = Encoding.UTF8.GetString(nameBytes).Trim('\0').Trim();
-            if (!string.Equals(user, "admin", StringComparison.OrdinalIgnoreCase))
-                registros.Add((user, ticks));
+            _subscriptores.Add(canal);
         }
 
-        var ultimos = registros
-            .OrderByDescending(r => r.ticks)
-            .Take(request.Cantidad);
-
-        foreach (var (usuario, ticks) in ultimos)
+        int enviados = 0;
+        try
         {
-            var fecha = new DateTime(ticks, DateTimeKind.Utc).ToString("dd-MM-yyyy HH:mm:ss");
-            await responseStream.WriteAsync(new InicioSesionResponse
+            await foreach (var evento in canal.Reader.ReadAllAsync(context.CancellationToken))
             {
-                NombreUsuario = usuario,
-                Timestamp = fecha
-            });
+                await responseStream.WriteAsync(evento);
+                enviados++;
+                if (enviados >= request.Cantidad)
+                    break;
+            }
+        }
+        finally
+        {
+            lock (_subscriptores)
+            {
+                _subscriptores.Remove(canal);
+            }
         }
     }
+
 
 }

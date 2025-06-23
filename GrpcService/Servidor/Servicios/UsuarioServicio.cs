@@ -80,8 +80,11 @@ namespace Servidor.Servicios
             if (string.IsNullOrWhiteSpace(nombreUsuario) || string.IsNullOrWhiteSpace(clave))
                 return null;
 
-            return _usuarios.FirstOrDefault(u => u.NombreUsuario == nombreUsuario && u.Clave == clave);
+            var usuario = _usuarios.FirstOrDefault(u => u.NombreUsuario == nombreUsuario && u.Clave == clave);
+
+            return usuario;
         }
+
 
         public bool RegistrarUsuario(string nombreUsuario, string clave)
         {

@@ -78,10 +78,14 @@ namespace Servidor.Utils
                     if (usuarioAutenticado != null)
                     {
                         _usuarioActual = usuario;
+
+                        AdministracionServicio.NotificarInicioSesion(usuario);
+
                         Logger.Log($"[Cliente {_id}] Usuario '{usuario}' inició sesión.");
                         return "LOGIN_OK";
                     }
                     return "LOGIN_FAIL";
+
 
                 case CommandConstants.RegistrarUsuario:
                     var partesRegistro = data.Split('|');
