@@ -10,9 +10,15 @@ public class ClienteAdministrativo
 
     public async Task ConectarAsync()
     {
-        _channel = GrpcChannel.ForAddress("https://localhost:7286");
+        AppContext.SetSwitch(
+          "System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport",
+          true
+        );
+
+        _channel = GrpcChannel.ForAddress("http://localhost:8080");
         ClienteGrpc = new Administracion.AdministracionClient(_channel);
-        await Task.CompletedTask;
+
+        Console.WriteLine($"[DEBUG] ClienteGrpc inicializado: {ClienteGrpc != null}");
     }
 
     public void Cerrar()

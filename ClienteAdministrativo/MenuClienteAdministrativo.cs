@@ -67,8 +67,10 @@ namespace ClienteAdministrativo
 
         public MenuClienteAdministrativo(Administracion.AdministracionClient client)
         {
-            _client = client;
+            _client = client
+                ?? throw new ArgumentNullException(nameof(client), "El cliente gRPC no puede ser null");
         }
+
 
         public async Task IniciarAsync()
         {
@@ -283,6 +285,12 @@ namespace ClienteAdministrativo
 
         private async Task EliminarArticuloGrpc()
         {
+            if (_client == null)
+            {
+                Console.WriteLine("[ERROR] _client es null en EliminarArticuloGrpc()");
+                return;
+            }
+
             var requestListado = new ABMArticuloRequest
             {
                 Operacion = "listar"
@@ -667,7 +675,6 @@ namespace ClienteAdministrativo
                     Console.WriteLine($"• Usuario: {inicio.NombreUsuario} - Fecha y hora: {inicio.Timestamp}");
                 }
 
-                Console.WriteLine("[DEBUG] Finalizó stream normalmente");
             }
             catch (Exception ex)
             {

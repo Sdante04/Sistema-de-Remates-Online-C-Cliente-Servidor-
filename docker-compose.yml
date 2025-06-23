@@ -25,7 +25,8 @@ services:
       dockerfile: GrpcService/Dockerfile
     container_name: servidor-app
     ports:
-      - "5000:5000"
+      - "5000:5000"   
+      - "8080:8080"   
     environment:
       TZ: America/Montevideo
       SERVER_IP: 0.0.0.0
