@@ -58,107 +58,67 @@ namespace Servidor.Servicios
             CargarRematesDesdeArchivo();
         }
 
-        private void CargarArticulosDesdeArchivo()
+        public void CargarArticulosDesdeArchivo()
         {
             lock (_lock)
             {
                 _articulos.Clear();
                 if (!File.Exists(ArticulosFilePath))
-                {
-                    Console.WriteLine("Archivo articulos.bin no encontrado. No se cargaron artículos.");
                     return;
-                }
 
-                try
+                using var fs = new FileStream(ArticulosFilePath, FileMode.Open, FileAccess.Read);
+                using var reader = new BinaryReader(fs);
+                int recordSize = sizeof(int) + 6 * StringByteSize + sizeof(int) + sizeof(long) + sizeof(bool);
+                int count = (int)(fs.Length / recordSize);
+
+                for (int i = 0; i < count; i++)
                 {
-                    using (FileStream fs = new FileStream(ArticulosFilePath, FileMode.Open, FileAccess.Read))
-                    using (BinaryReader reader = new BinaryReader(fs))
+                    fs.Seek(i * recordSize, SeekOrigin.Begin);
+                    var al = new ArticuloLocal
                     {
-                        int recordSize = sizeof(int) + 6 * StringByteSize + sizeof(int) + sizeof(long) + sizeof(bool);
-                        int recordCount = (int)(fs.Length / recordSize);
-
-                        for (int i = 0; i < recordCount; i++)
-                        {
-                            fs.Seek(i * recordSize, SeekOrigin.Begin);
-
-                            ArticuloLocal articuloLocal = new ArticuloLocal
-                            {
-                                ID = reader.ReadInt32(),
-                                TituloBytes = reader.ReadBytes(StringByteSize),
-                                DescripcionBytes = reader.ReadBytes(StringByteSize),
-                                CategoriaBytes = reader.ReadBytes(StringByteSize),
-                                PrecioBase = reader.ReadInt32(),
-                                FechaCierreTicks = reader.ReadInt64(),
-                                ImagenNombreArchivoBytes = reader.ReadBytes(StringByteSize),
-                                UsuarioBytes = reader.ReadBytes(StringByteSize),
-                                Finalizado = reader.ReadBoolean(),
-                                UsuarioGanadorBytes = reader.ReadBytes(StringByteSize)
-                            };
-
-                            if (articuloLocal.ID <= 0)
-                            {
-                                Console.WriteLine($"Advertencia: Artículo con ID inválido ({articuloLocal.ID}) en el registro {i}. Se omitirá.");
-                                continue;
-                            }
-
-                            DateTime fechaCierre;
-                            try
-                            {
-                                fechaCierre = new DateTime(articuloLocal.FechaCierreTicks);
-                                if (fechaCierre.Year < 2000 || fechaCierre.Year > 2100)
-                                {
-                                    Console.WriteLine($"Advertencia: Fecha de cierre inválida ({fechaCierre}) en el registro {i}. Se omitirá.");
-                                    continue;
-                                }
-                            }
-                            catch (ArgumentOutOfRangeException)
-                            {
-                                Console.WriteLine($"Advertencia: Fecha de cierre corrupta en el registro {i}. Se omitirá.");
-                                continue;
-                            }
-
-                            Articulo articulo = new Articulo
-                            {
-                                ID = articuloLocal.ID,
-                                Titulo = DecodeByteArrayToString(articuloLocal.TituloBytes),
-                                Descripcion = DecodeByteArrayToString(articuloLocal.DescripcionBytes),
-                                Categoria = DecodeByteArrayToString(articuloLocal.CategoriaBytes),
-                                PrecioBase = articuloLocal.PrecioBase,
-                                FechaCierre = fechaCierre,
-                                ImagenNombreArchivo = DecodeByteArrayToString(articuloLocal.ImagenNombreArchivoBytes),
-                                Usuario = DecodeByteArrayToString(articuloLocal.UsuarioBytes),
-                                Finalizado = articuloLocal.Finalizado,
-                                UsuarioGanador = DecodeByteArrayToString(articuloLocal.UsuarioGanadorBytes),
-                                Ofertas = new List<Oferta>()
-                            };
-
-                            _articulos.Add(articulo);
-
-                            if (articulo.ID > _ultimoId)
-                            {
-                                _ultimoId = articulo.ID;
-                            }
-                        }
-
-                        Console.WriteLine($"Cargados {_articulos.Count} artículos desde {ArticulosFilePath}.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error cargando artículos desde el archivo: {ex.Message}");
+                        ID = reader.ReadInt32(),
+                        TituloBytes = reader.ReadBytes(StringByteSize),
+                        DescripcionBytes = reader.ReadBytes(StringByteSize),
+                        CategoriaBytes = reader.ReadBytes(StringByteSize),
+                        PrecioBase = reader.ReadInt32(),
+                        FechaCierreTicks = reader.ReadInt64(),
+                        ImagenNombreArchivoBytes = reader.ReadBytes(StringByteSize),
+                        UsuarioBytes = reader.ReadBytes(StringByteSize),
+                        Finalizado = reader.ReadBoolean(),
+                        UsuarioGanadorBytes = reader.ReadBytes(StringByteSize)
+                    };
+                    var art = new Articulo
+                    {
+                        ID = al.ID,
+                        Titulo = DecodeByteArrayToString(al.TituloBytes),
+                        Descripcion = DecodeByteArrayToString(al.DescripcionBytes),
+                        Categoria = DecodeByteArrayToString(al.CategoriaBytes),
+                        PrecioBase = al.PrecioBase,
+                        FechaCierre = new DateTime(al.FechaCierreTicks),
+                        ImagenNombreArchivo = DecodeByteArrayToString(al.ImagenNombreArchivoBytes),
+                        Usuario = DecodeByteArrayToString(al.UsuarioBytes),
+                        Finalizado = al.Finalizado,
+                        UsuarioGanador = DecodeByteArrayToString(al.UsuarioGanadorBytes),
+                        Ofertas = new List<Oferta>()
+                    };
+                    _articulos.Add(art);
+                    _ultimoId = Math.Max(_ultimoId, art.ID);
                 }
             }
         }
+
 
         public List<Articulo> RetornaArticulos()
         {
             lock (_lock)
             {
+                CargarArticulosDesdeArchivo();      
                 return _articulos.ToList();
             }
         }
 
-        private void CargarOfertasDesdeArchivo()
+
+        public void CargarOfertasDesdeArchivo()
         {
             lock (_lock)
             {
@@ -260,68 +220,27 @@ namespace Servidor.Servicios
         {
             lock (_lock)
             {
-                try
+                using var fs = new FileStream(ArticulosFilePath, FileMode.Create, FileAccess.Write);
+                using var writer = new BinaryWriter(fs);
+
+                foreach (var a in _articulos)
                 {
-                    if (!_articulos.Any())
-                    {
-                        if (File.Exists(ArticulosFilePath))
-                        {
-                            File.Delete(ArticulosFilePath);
-                            Console.WriteLine("No hay artículos para guardar. Archivo articulos.bin eliminado.");
-                        }
-                        return;
-                    }
-
-                    string directory = Path.GetDirectoryName(ArticulosFilePath);
-                    if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-                    {
-                        Directory.CreateDirectory(directory);
-                    }
-
-                    using (FileStream fs = new FileStream(ArticulosFilePath, FileMode.Create, FileAccess.Write))
-                    using (BinaryWriter writer = new BinaryWriter(fs))
-                    {
-                        foreach (var articulo in _articulos)
-                        {
-                            ArticuloLocal articuloLocal = new ArticuloLocal
-                            {
-                                ID = articulo.ID,
-                                TituloBytes = EncodeStringToFixedSizeByteArray(articulo.Titulo, StringByteSize),
-                                DescripcionBytes = EncodeStringToFixedSizeByteArray(articulo.Descripcion, StringByteSize),
-                                CategoriaBytes = EncodeStringToFixedSizeByteArray(articulo.Categoria, StringByteSize),
-                                PrecioBase = articulo.PrecioBase,
-                                FechaCierreTicks = articulo.FechaCierre.Ticks,
-                                ImagenNombreArchivoBytes = EncodeStringToFixedSizeByteArray(articulo.ImagenNombreArchivo ?? "", StringByteSize),
-                                UsuarioBytes = EncodeStringToFixedSizeByteArray(articulo.Usuario, StringByteSize),
-                                Finalizado = articulo.Finalizado,
-                                UsuarioGanadorBytes = EncodeStringToFixedSizeByteArray(articulo.UsuarioGanador ?? "", StringByteSize)
-                            };
-
-                            writer.Write(articuloLocal.ID);
-                            writer.Write(articuloLocal.TituloBytes);
-                            writer.Write(articuloLocal.DescripcionBytes);
-                            writer.Write(articuloLocal.CategoriaBytes);
-                            writer.Write(articuloLocal.PrecioBase);
-                            writer.Write(articuloLocal.FechaCierreTicks);
-                            writer.Write(articuloLocal.ImagenNombreArchivoBytes);
-                            writer.Write(articuloLocal.UsuarioBytes);
-                            writer.Write(articuloLocal.Finalizado);
-                            writer.Write(articuloLocal.UsuarioGanadorBytes);
-                        }
-
-                        writer.Flush();
-                        fs.Flush();
-                    }
-
-                    Console.WriteLine($"Artículos guardados correctamente. Total: {_articulos.Count} artículos.");
+                    writer.Write(a.ID);
+                    writer.Write(EncodeStringToFixedSizeByteArray(a.Titulo, StringByteSize));
+                    writer.Write(EncodeStringToFixedSizeByteArray(a.Descripcion, StringByteSize));
+                    writer.Write(EncodeStringToFixedSizeByteArray(a.Categoria, StringByteSize));
+                    writer.Write(a.PrecioBase);
+                    writer.Write(a.FechaCierre.Ticks);
+                    writer.Write(EncodeStringToFixedSizeByteArray(a.ImagenNombreArchivo ?? "", StringByteSize));
+                    writer.Write(EncodeStringToFixedSizeByteArray(a.Usuario, StringByteSize));
+                    writer.Write(a.Finalizado);
+                    writer.Write(EncodeStringToFixedSizeByteArray(a.UsuarioGanador ?? "", StringByteSize));
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error guardando artículos: {ex.Message}");
-                    throw;
-                }
+                writer.Flush();
+                fs.Flush();
             }
         }
+
 
         public string PublicarArticulo(string datos, string usuario, out bool esExitoso)
         {
@@ -715,37 +634,26 @@ namespace Servidor.Servicios
             lock (_lock)
             {
                 eliminado = false;
+                CargarArticulosDesdeArchivo();
 
                 if (!int.TryParse(datos, out int id))
                     return "ID inválido.";
 
-                var articulo = _articulos.FirstOrDefault(a => a.ID == id && (a.Usuario == usuario || usuario == "administrador"));
+                var articulo = _articulos
+                    .FirstOrDefault(a => a.ID == id
+                        && (a.Usuario == usuario || usuario == "administrador"));
                 if (articulo == null)
-                    return "Artículo no encontrado o no tienes permiso para eliminarlo.";
-
-                if (articulo.Ofertas.Any())
-                    return "No se puede eliminar un artículo con ofertas registradas.";
-
-                if (articulo.FechaCierre <= DateTime.Now)
-                    return "No se puede eliminar un remate finalizado.";
+                    return "Artículo no encontrado o sin permiso.";
 
                 _articulos.Remove(articulo);
                 eliminado = true;
-
-                if (!string.IsNullOrEmpty(articulo.ImagenNombreArchivo))
-                {
-                    try
-                    {
-                        File.Delete(articulo.ImagenNombreArchivo);
-                    }
-                    catch { }
-                }
 
                 GuardarArticulosEnArchivo();
 
                 return $"Artículo '{articulo.Titulo}' eliminado correctamente.";
             }
         }
+
 
         public string ListarArticulosConImagen()
         {

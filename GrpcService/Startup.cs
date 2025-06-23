@@ -12,6 +12,8 @@ public class Startup
     {
         services.AddGrpc();
         services.AddControllers();
+        services.AddSingleton<ArticuloServicio>();
+        services.AddSingleton<Servidor.Server>();
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

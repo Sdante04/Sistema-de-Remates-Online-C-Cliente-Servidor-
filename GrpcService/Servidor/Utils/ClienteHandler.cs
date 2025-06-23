@@ -122,15 +122,19 @@ namespace Servidor.Utils
 
                 case CommandConstants.ObtenerArticulosUsuario:
                     if (_usuarioActual == null) return "NO_AUTENTICADO";
+                    _articuloServicio.CargarArticulosDesdeArchivo();
                     return _articuloServicio.ObtenerArticulosDeUsuario(_usuarioActual);
 
                 case CommandConstants.ListarArticulosRemate:
+                    _articuloServicio.CargarArticulosDesdeArchivo();
                     return _articuloServicio.ObtenerTodosLosArticulosEnRemate();
 
                 case CommandConstants.ListarTodosLosArticulos:
+                    _articuloServicio.CargarArticulosDesdeArchivo();
                     return _articuloServicio.ObtenerTodosLosArticulos();
 
                 case CommandConstants.FiltrarArticulosPorCategoria:
+                    _articuloServicio.CargarArticulosDesdeArchivo();
                     return _articuloServicio.FiltrarArticulosPorCategoria(data);
 
                 case CommandConstants.ConsultarArticulo:
