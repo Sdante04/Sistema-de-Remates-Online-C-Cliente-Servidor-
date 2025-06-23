@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Text;
+using Common.Models;
 
 namespace Servidor.Servicios
 {
@@ -81,6 +82,17 @@ namespace Servidor.Servicios
                 return null;
 
             var usuario = _usuarios.FirstOrDefault(u => u.NombreUsuario == nombreUsuario && u.Clave == clave);
+
+            if (usuario != null)
+            {
+                _ = EventPublisher.PublicarEventoAsync(new EventoUsuario
+                {
+                    Tipo = "Login",
+                    Fecha = DateTime.Now,
+                    Usuario = usuario.NombreUsuario
+                });
+            }
+
 
             return usuario;
         }

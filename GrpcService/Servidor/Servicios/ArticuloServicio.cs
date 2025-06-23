@@ -1,4 +1,5 @@
-﻿using Servidor.Dominio;
+﻿using Common.Models;
+using Servidor.Dominio;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -284,6 +285,16 @@ namespace Servidor.Servicios
 
                 GuardarArticulosEnArchivo();
 
+                _ = EventPublisher.PublicarEventoAsync(new EventoArticulo
+                {
+                    Tipo = "Modificacion",
+                    Fecha = DateTime.Now,
+                    ArticuloId = nuevo.ID,
+                    Titulo = nuevo.Titulo,
+                    PrecioBase = nuevo.PrecioBase,
+                    Usuario = nuevo.Usuario
+                });
+
                 return $"El artículo '{titulo}' fue publicado correctamente.|ID={nuevo.ID}";
             }
         }
@@ -394,6 +405,17 @@ namespace Servidor.Servicios
 
                 GuardarArticulosEnArchivo();
 
+                _ = EventPublisher.PublicarEventoAsync(new EventoArticulo
+                {
+                    Tipo = "Modificacion",
+                    Fecha = DateTime.Now,
+                    ArticuloId = articulo.ID,
+                    Titulo = articulo.Titulo,
+                    PrecioBase = articulo.PrecioBase,
+                    Usuario = articulo.Usuario
+                });
+
+
                 return $"Artículo '{articulo.Titulo}' editado correctamente.";
             }
         }
@@ -473,6 +495,15 @@ namespace Servidor.Servicios
                 GuardarOfertaLocal(nuevaOferta);
 
                 GuardarArticulosEnArchivo();
+
+                _ = EventPublisher.PublicarEventoAsync(new EventoOferta
+                {
+                    Tipo = "Oferta",
+                    Fecha = DateTime.Now,
+                    ArticuloId = articulo.ID,
+                    Usuario = usuario,
+                    Monto = montoOfertado
+                });
 
                 return $"Oferta registrada: {montoOfertado} por {usuario} para '{articulo.Titulo}'|ID={articulo.ID}";
             }
@@ -561,6 +592,15 @@ namespace Servidor.Servicios
                             articulo.UsuarioGanador = mejorOferta.Usuario;
 
                             GuardarRemateLocal(articulo, mejorOferta.Monto);
+
+                            _ = EventPublisher.PublicarEventoAsync(new EventoRemate
+                            {
+                                Tipo = "RemateFinalizado",
+                                Fecha = DateTime.Now,
+                                ArticuloId = articulo.ID,
+                                UsuarioGanador = articulo.UsuarioGanador,
+                                MontoFinal = mejorOferta.Monto
+                            });
                         }
                         cambios = true;
                     }
@@ -647,6 +687,26 @@ namespace Servidor.Servicios
 
                 _articulos.Remove(articulo);
                 eliminado = true;
+
+                _ = EventPublisher.PublicarEventoAsync(new EventoArticulo
+                {
+                    Tipo = "Baja",
+                    Fecha = DateTime.Now,
+                    ArticuloId = articulo.ID,
+                    Titulo = articulo.Titulo,
+                    PrecioBase = articulo.PrecioBase,
+                    Usuario = articulo.Usuario
+                });
+
+                if (!string.IsNullOrEmpty(articulo.ImagenNombreArchivo))
+                {
+                    try
+                    {
+                        File.Delete(articulo.ImagenNombreArchivo);
+                    }
+                    catch { }
+                }
+
 
                 GuardarArticulosEnArchivo();
 
