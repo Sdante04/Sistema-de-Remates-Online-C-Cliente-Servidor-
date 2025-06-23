@@ -33,28 +33,56 @@ public class AdministracionServicio : Administracion.AdministracionBase
     {
         string resultado;
         bool exito;
+        string operacion = request.Operacion?.Trim().ToLower();
 
-        if (request.Operacion == "alta")
+        Console.WriteLine($"[gRPC] Operación recibida: '{operacion}'");
+
+        var articulos = _articuloServicio.RetornaArticulos();
+
+        switch (operacion)
         {
-            string datos = $"{request.Titulo}|{request.Descripcion}|{request.Categoria}|{request.PrecioBase}|{DateTime.Now.AddDays(7):dd-MM-yyyy HH:mm}|imagen.png";
-            resultado = _articuloServicio.PublicarArticulo(datos, request.Usuario, out exito);
-        }
-        else if (request.Operacion == "baja")
-        {
-            resultado = _articuloServicio.EliminarArticulo(request.Id.ToString(), request.Usuario, out exito);
-        }
-        else if (request.Operacion == "modificacion")
-        {
-            string datos = $"{request.Id}|{request.Titulo}|{request.Descripcion}|{request.Categoria}|{request.PrecioBase}|{DateTime.Now.AddDays(7):dd-MM-yyyy HH:mm}|imagen.png";
-            resultado = _articuloServicio.EditarArticulo(datos, request.Usuario, out exito);
-        }
-        else
-        {
-            resultado = "Operación no válida.";
+            case "alta":
+                string datosAlta = $"{request.Titulo}|{request.Descripcion}|{request.Categoria}|{request.PrecioBase}|{request.FechaCierre}|{request.ImagenNombreArchivo}";
+                resultado = _articuloServicio.PublicarArticulo(datosAlta, request.Usuario, out exito);
+                break;
+
+            case "baja":
+                string datosBaja = $"{request.Id}|{request.FechaCierre}";
+                resultado = _articuloServicio.EliminarArticulo(request.Id.ToString(), request.Usuario, out exito);
+                break;
+
+            case "modificacion":
+                string datosMod = $"{request.Id}|{request.Titulo}|{request.Descripcion}|{request.Categoria}|{request.PrecioBase}|{request.FechaCierre}|{request.ImagenNombreArchivo}";
+                resultado = _articuloServicio.EditarArticulo(datosMod, request.Usuario, out exito);
+                break;
+
+            case "listar":
+                var disponibles = articulos
+                                .Where(a =>
+                                    !a.Ofertas.Any() &&
+                                    a.FechaCierre > DateTime.Now)
+                                .Select(a => $"{a.ID}|{a.Titulo}|{a.Descripcion}|{a.Categoria}|{a.PrecioBase}|{a.FechaCierre}")
+                                .ToList(); if (disponibles.Count == 0)
+                {
+                    resultado = "SIN_ARTICULOS";
+                }
+                else
+                {
+                    resultado = string.Join("\n", disponibles);
+                }
+
+                exito = true;
+                break;
+
+            default:
+                resultado = "Operación no válida.";
+                exito = false;
+                break;
         }
 
         return Task.FromResult(new ABMArticuloResponse { Mensaje = resultado });
     }
+
 
 
     public override Task<HistorialResponse> ConsultarHistorial(HistorialRequest request, ServerCallContext context)

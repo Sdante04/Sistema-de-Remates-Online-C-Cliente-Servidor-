@@ -15,7 +15,7 @@ namespace ClienteAdministrativo
         private const string RematesFilePath = "remates.bin";
         private const string UsuariosFilePath = "usuarios.bin";
 
-        private string _usuarioActual = "admin";
+        private string _usuarioActual = "administrador";
 
         private struct ArticuloLocal
         {
@@ -292,22 +292,21 @@ namespace ClienteAdministrativo
 
             if (responseListado.Mensaje == "SIN_ARTICULOS")
             {
-                Console.WriteLine("No hay artículos disponibles.");
+                Console.WriteLine("No hay artículos disponibles para eliminar.");
                 return;
             }
 
             var articulos = responseListado.Mensaje
                 .Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                .Where(l => l.Contains(_usuarioActual))
                 .ToList();
 
             if (articulos.Count == 0)
             {
-                Console.WriteLine("No tienes artículos para eliminar.");
+                Console.WriteLine("No hay artículos eliminables en este momento.");
                 return;
             }
 
-            Console.WriteLine("Tus artículos:");
+            Console.WriteLine("Artículos disponibles para eliminar:");
             foreach (var art in articulos)
             {
                 Console.WriteLine(art);
@@ -330,30 +329,6 @@ namespace ClienteAdministrativo
 
             var response = await _client.ABMArticuloAsync(requestEliminar);
             Console.WriteLine(response.Mensaje);
-
-            if (response.Mensaje.Contains("eliminado correctamente"))
-            {
-                try
-                {
-                    EliminarArticuloLocal(id);
-                    Console.WriteLine("Artículo eliminado localmente.");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error eliminando artículo localmente: {ex.Message}");
-                }
-            }
-        }
-
-        private void EliminarArticuloLocal(int id)
-        {
-            var articulos = LeerTodosArticulosLocales();
-            articulos.RemoveAll(a => a.ID == id);
-            File.Delete(ArticulosFilePath);
-            foreach (var articulo in articulos)
-            {
-                GuardarArticuloLocal(articulo);
-            }
         }
 
 

@@ -150,6 +150,14 @@ namespace Servidor.Servicios
             }
         }
 
+        public List<Articulo> RetornaArticulos()
+        {
+            lock (_lock)
+            {
+                return _articulos.ToList();
+            }
+        }
+
         private void CargarOfertasDesdeArchivo()
         {
             lock (_lock)
@@ -433,7 +441,7 @@ namespace Servidor.Servicios
                 if (!int.TryParse(partes[0], out int id))
                     return "ID inválido.";
 
-                var articulo = _articulos.FirstOrDefault(a => a.ID == id && a.Usuario == usuario);
+                var articulo = _articulos.FirstOrDefault(a => a.ID == id && (a.Usuario == usuario || usuario == "administrador"));
                 if (articulo == null)
                     return "Artículo no encontrado o no tienes permiso para editarlo.";
 
@@ -711,7 +719,7 @@ namespace Servidor.Servicios
                 if (!int.TryParse(datos, out int id))
                     return "ID inválido.";
 
-                var articulo = _articulos.FirstOrDefault(a => a.ID == id && a.Usuario == usuario);
+                var articulo = _articulos.FirstOrDefault(a => a.ID == id && (a.Usuario == usuario || usuario == "administrador"));
                 if (articulo == null)
                     return "Artículo no encontrado o no tienes permiso para eliminarlo.";
 
